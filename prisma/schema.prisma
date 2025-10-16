@@ -1,0 +1,165 @@
+// Datasource
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Generator
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums
+enum Role {
+  user
+  moderator
+  admin
+}
+
+enum QuizType {
+  single_choice
+  multi_choice
+  true_false
+  short_answer
+}
+
+enum QuizStatus {
+  draft
+  pending
+  approved
+  rejected
+}
+
+enum QuizSetStatus {
+  draft
+  private
+  public
+}
+
+enum ReportTargetType {
+  quiz
+  quizSet
+  user
+}
+
+enum ReportStatus {
+  open
+  reviewing
+  resolved
+  dismissed
+}
+
+enum PointsLogType {
+  submit_set
+  correct_answer
+  quiz_approved
+  daily_bonus
+  admin_adjust
+}
+
+// Models
+model User {
+  id            String   @id @default(uuid())
+  walletAddress String?  @unique
+  email         String?  @unique
+  username      String   @unique
+  avatarUrl     String?
+  role          Role     @default(user)
+  points        Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  quizzes       Quiz[]
+  quizSets      QuizSet[]
+  submissions   Submission[]
+  attempts      QuizAttempt[]
+  reports       Report[]   @relation("ReporterReports")
+  pointsLogs    PointsLog[]
+}
+
+model Quiz {
+  id          String      @id @default(uuid())
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id])
+  title       String
+  type        QuizType
+  content     Json
+  answer      Json
+  explanation String?
+  tags        String[]
+  status      QuizStatus  @default(pending)
+  popularity  Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  attempts    QuizAttempt[]
+}
+
+model QuizSet {
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  title       String
+  description String?
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id])
+  quizIds     String[]
+  status      QuizSetStatus @default(draft)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  submissions Submission[]
+}
+
+model Submission {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  quizSetId    String
+  quizSet      QuizSet  @relation(fields: [quizSetId], references: [id])
+  answers      Json
+  score        Int
+  correctCount Int
+  durationSec  Int
+  createdAt    DateTime @default(now())
+}
+
+model QuizAttempt {
+  id         String  @id @default(uuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id])
+  quizId     String
+  quiz       Quiz    @relation(fields: [quizId], references: [id])
+  userAnswer Json
+  isCorrect  Boolean
+  createdAt  DateTime @default(now())
+}
+
+model Report {
+  id          String           @id @default(uuid())
+  reporterId  String
+  reporter    User             @relation("ReporterReports", fields: [reporterId], references: [id])
+  targetType  ReportTargetType
+  targetId    String
+  reason      String
+  status      ReportStatus     @default(open)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model PointsLog {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  type      PointsLogType
+  amount    Int
+  refId     String?
+  createdAt DateTime      @default(now())
+}
+
+model SiweNonce {
+  id        String   @id @default(uuid())
+  value     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
