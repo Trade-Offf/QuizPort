@@ -6,8 +6,12 @@ import { requireUser } from '@/lib/authz';
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const query = Object.fromEntries(url.searchParams.entries());
+  // 支持 tags=tag1,tag2 或多次出现 ?tags=a&tags=b
+  const tagsParams = url.searchParams.getAll('tags');
+  const tagsMerged = tagsParams.flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean));
   const { status, keyword, author, sort, page = 1, pageSize = 20 } = validate(listQuizzesQuerySchema, {
     ...query,
+    tags: tagsMerged.length ? tagsMerged : undefined,
     page: Number(query.page || 1),
     pageSize: Number(query.pageSize || 20),
   });
@@ -16,6 +20,7 @@ export async function GET(req: Request) {
   if (status) where.status = status;
   if (keyword) where.title = { contains: keyword, mode: 'insensitive' };
   if (author) where.authorId = author;
+  if (tagsMerged.length) where.tags = { hasSome: tagsMerged };
 
   const [items, total] = await Promise.all([
     prisma.quiz.findMany({

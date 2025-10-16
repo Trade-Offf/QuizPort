@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import ProfileForm from './profile-form';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -25,6 +26,10 @@ export default async function DashboardPage() {
               <li key={q.id}>{q.title}（{q.status}）</li>
             ))}
           </ul>
+        </div>
+        <div className="mt-6">
+          {/* @ts-expect-error Server Component imports client */}
+          <ProfileForm initial={{ username: user?.username || '', avatarUrl: user?.avatarUrl || '' }} />
         </div>
       </div>
     </main>

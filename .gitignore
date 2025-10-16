@@ -2,6 +2,9 @@
 node_modules
 .next
 out
+.npm-cache
+public/fonts
+.tmp-lxgw*
 
 # Env
 .env
