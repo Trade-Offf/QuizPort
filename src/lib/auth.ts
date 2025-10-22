@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { SiweMessage } from 'siwe';
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
+  jwt: { maxAge: 30 * 24 * 60 * 60 },
   providers: [
     Credentials({
       name: 'SIWE',

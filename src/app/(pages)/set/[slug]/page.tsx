@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { Card, CardHeader, CardBody, Chip, Link as UiLink, Button } from '@heroui/react';
+import Link from 'next/link';
+import { DebugMeta } from './DebugMeta';
 
 async function getData(slug: string) {
   const res = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sets/${slug}`, { cache: 'no-store' });
@@ -11,11 +14,31 @@ export default async function SetPage({ params }: { params: { slug: string } }) 
   const data = await getData(params.slug);
   if (!data) notFound();
   const { set, quizzes } = data;
+  const urlMatch = (set.description || '').match(/来源：([^\n\s]+)/);
+  const authorMatch = (set.description || '').match(/作者：([^\n]+)/);
+  const sourceUrl = urlMatch?.[1];
+  let host = '';
+  try { if (sourceUrl) host = new URL(sourceUrl).hostname; } catch {}
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-semibold">{set.title}</h1>
-        <p className="text-gray-600">{set.description}</p>
+        <DebugMeta title={set.title} author={authorMatch?.[1] || null} sourceUrl={sourceUrl || null} host={host || null} description={set.description || ''} />
+        <Card className="rounded-2xl bg-white/5 border border-white/10 text-white">
+          <CardBody>
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xl font-semibold tracking-tight truncate">{set.title}</div>
+                <div className="mt-1 text-sm text-white/70">作者：{authorMatch?.[1] || '未识别'}</div>
+              </div>
+              {sourceUrl && (
+                <Button as={Link as any} href={sourceUrl} target="_blank" color="success" radius="md" size="md" className="shrink-0 self-center">
+                  原文链接
+                </Button>
+              )}
+            </div>
+          </CardBody>
+        </Card>
         {/* @ts-expect-error Server Component imports client */}
         <SetPlayerClient setId={set.id} quizzes={quizzes} />
       </div>

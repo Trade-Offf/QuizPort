@@ -1,39 +1,79 @@
-import dynamic from 'next/dynamic';
-import Image from 'next/image';
-const Onboarding = dynamic(() => import('./onboarding').then(m => m.Onboarding), { ssr: false });
+import { Button } from '@heroui/react';
+import Link from 'next/link';
+import LiquidEther from '@/components/LiquidEther';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-radial-fade">
-      <section className="mx-auto flex max-w-6xl flex-col items-center px-4 py-12 text-center md:py-20">
-        <h1 className="text-5xl font-extrabold leading-tight md:text-6xl">
-          <span className="bg-gradient-brand bg-clip-text text-transparent">把技术博客变成可验证的学习</span>
+    <main className="relative min-h-screen text-white bg-[#0b0912]">
+      {/* 背景层：铺满容器，放在内容层下方 */}
+      <div className="absolute inset-0 z-0">
+        <LiquidEther
+          colors={['#5227FF', '#FF9FFC', '#B19EEF']}
+          mouseForce={20}
+          cursorSize={100}
+          isViscous={false}
+          viscous={30}
+          iterationsViscous={32}
+          iterationsPoisson={32}
+          resolution={0.5}
+          isBounce={false}
+          autoDemo={true}
+          autoSpeed={0.5}
+          autoIntensity={2.2}
+          takeoverDuration={0.25}
+          autoResumeDelay={3000}
+          autoRampDuration={0.6}
+        />
+      </div>
+      {/* 内容层：位于背景之上 */}
+      <section className="relative z-10 mx-auto flex max-w-[1120px] flex-col items-center px-6 pt-16 pb-20 text-center md:pt-24">
+        {/* 主标题 */}
+        <h1 className="mt-32 text-[44px] md:text-[88px] leading-[1.06] font-extrabold tracking-tight">
+          问以明之,习以成之
         </h1>
-        <p className="mt-4 max-w-3xl text-lg text-gray-700 md:text-xl">去中心化练习题平台：钱包登录，任何人可出题、答题；在阅读之后，用题目验证理解、积累可携带的学习凭证。</p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <a href="/quizzes" className="rounded-lg bg-primary-500 px-6 py-3 text-white shadow hover:bg-primary-600">开始练习</a>
-          <a href="/creator/sets/new" className="rounded-lg border border-gray-300 px-6 py-3 text-gray-800 hover:border-gray-400">创建题单</a>
+        <p className="mt-5 max-w-2xl text-white/80 text-[20px] md:text-[24px]">
+          一键从文章到试题，智能抽取要点、生成多题型，助力高效巩固
+        </p>
+
+        {/* CTA */}
+        <div className="mt-16 flex flex-wrap items-center justify-center gap-4">
+          <Button
+            as={Link}
+            href="/upload"
+            size="lg"
+            radius="full"
+            className="bg-white text-gray-900 shadow-lg hover:shadow-xl"
+          >
+            开始测试
+          </Button>
+          <Button
+            as={Link}
+            href="/history"
+            variant="bordered"
+            size="lg"
+            radius="full"
+            className="border-white/30 text-white/80 hover:text-white"
+          >
+            历史题库
+          </Button>
         </div>
-        {/* 图片已取消按你的要求删除；保留容器结构以便后续需要时快速复用 */}
-        {/* @ts-expect-error Server Component imports client */}
-        <div className="w-full max-w-6xl">
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="/set/hello-world" className="card card-hover p-6 text-left">
-              <div className="text-xl font-semibold">试试示例题单</div>
-              <p className="mt-2 text-sm text-gray-600">快速体验作答与评分</p>
-            </a>
-            <a href="/quizzes" className="card card-hover p-6 text-left">
-              <div className="text-xl font-semibold">浏览题库</div>
-              <p className="mt-2 text-sm text-gray-600">探索更多题目与解析</p>
-            </a>
-            <a href="/creator/sets/new" className="card card-hover p-6 text-left">
-              <div className="text-xl font-semibold">创建题单</div>
-              <p className="mt-2 text-sm text-gray-600">组合题目生成分享链接</p>
-            </a>
-          </div>
-        </div>
+
+        {/* Tips */}
+        <p className="mt-24 text-medium text-white/60">
+          Tips：由于模型调用价格，所以生成测试题目功能仅对白名单开放，如果有想体验的朋友请掘金私信:
+          <a
+            href="https://juejin.cn/user/1591748568038823"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 underline text-white/80 hover:text-white"
+          >
+            HiStewie
+          </a>
+        </p>
+        <p className="mt-2 text-medium text-white/60">
+          目前仅支持「稀土掘金」题目生成，后续会支持其他平台。
+        </p>
       </section>
     </main>
   );
 }
-

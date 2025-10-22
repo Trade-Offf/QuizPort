@@ -1,317 +1,373 @@
-"use client";
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+'use client';
+import { useEffect, useState } from 'react';
+import {
+  Button,
+  Input,
+  Card,
+  CardHeader,
+  CardBody,
+  Checkbox,
+  Chip,
+  Progress,
+  Spinner,
+} from '@heroui/react';
 
-const optionSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });
-const baseSchema = z.object({
-  title: z.string().min(1, '请输入标题'),
-  explanation: z.string().optional(),
-  tags: z.string().optional(), // 逗号分隔
-});
-
-const singleChoiceSchema = baseSchema.extend({
-  type: z.literal('single_choice'),
-  contentStem: z.string().min(1, '请输入题干'),
-  options: z.array(optionSchema).min(2, '至少两个选项'),
-  answerSingle: z.string().min(1, '请选择正确答案'),
-});
-
-const multiChoiceSchema = baseSchema.extend({
-  type: z.literal('multi_choice'),
-  contentStem: z.string().min(1, '请输入题干'),
-  options: z.array(optionSchema).min(2, '至少两个选项'),
-  answerMulti: z.array(z.string().min(1)).min(1, '至少一个正确选项'),
-});
-
-const trueFalseSchema = baseSchema.extend({
-  type: z.literal('true_false'),
-  contentStem: z.string().min(1, '请输入题干'),
-  answerBool: z.enum(['true','false']),
-});
-
-const shortAnswerSchema = baseSchema.extend({
-  type: z.literal('short_answer'),
-  contentStem: z.string().min(1, '请输入题干'),
-  answerAccepts: z.string().min(1, '至少一个答案'), // 逗号分隔
-});
-
-const schema = z.discriminatedUnion('type', [singleChoiceSchema, multiChoiceSchema, trueFalseSchema, shortAnswerSchema]);
-
-type FormData = z.infer<typeof schema>;
-
-function parseTags(input?: string) {
-  return (input || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function emptyOptions(n = 4) {
-  return Array.from({ length: n }).map((_, i) => ({ id: String.fromCharCode(65 + i), text: '' }));
-}
+type Option = { id: string; text: string };
+type PreviewQuestion = {
+  id: string;
+  type: 'single' | 'multiple' | 'boolean';
+  content: string;
+  options: Option[];
+  answer: string[]; // 用于预览参考；创建时按服务端 normalize 处理
+  explanation?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  tags?: string[];
+};
 
 export default function UploadPage() {
-  const [resp, setResp] = useState<any>(null);
-  const [type, setType] = useState<'single_choice'|'multi_choice'|'true_false'|'short_answer'>('single_choice');
-  const [batchJson, setBatchJson] = useState('');
+  const [url, setUrl] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState<string | undefined>(undefined);
+  const [content, setContent] = useState('');
+  const [questions, setQuestions] = useState<PreviewQuestion[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{
+    message: string;
+    tone: 'success' | 'warning' | 'danger' | 'info';
+  } | null>(null);
+  const [debug, setDebug] = useState<{
+    source: 'direct' | 'proxy' | 'fallback';
+    matchedArticleRoot: boolean;
+    excerpt: string;
+    full?: string;
+  } | null>(null);
+  const canCreate = selected.size >= 5;
 
-  const defaultValues = useMemo<FormData>(() => {
-    if (type === 'single_choice') return { type, title: '', explanation: '', tags: '', contentStem: '', options: emptyOptions(), answerSingle: '' } as any;
-    if (type === 'multi_choice') return { type, title: '', explanation: '', tags: '', contentStem: '', options: emptyOptions(), answerMulti: [] } as any;
-    if (type === 'true_false') return { type, title: '', explanation: '', tags: '', contentStem: '', answerBool: 'true' } as any;
-    return { type, title: '', explanation: '', tags: '', contentStem: '', answerAccepts: '' } as any;
-  }, [type]);
-
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues,
-    values: defaultValues,
-    mode: 'onChange',
-  });
-
-  const onSubmit = async (data: FormData) => {
-    setResp(null);
-    const common = { title: data.title, explanation: data.explanation, tags: parseTags((data as any).tags) };
-    let payload: any;
-    if (data.type === 'single_choice') {
-      payload = {
-        ...common,
-        type: data.type,
-        content: { stem: data.contentStem, options: data.options },
-        answer: data.answerSingle,
-      };
-    } else if (data.type === 'multi_choice') {
-      payload = {
-        ...common,
-        type: data.type,
-        content: { stem: data.contentStem, options: data.options },
-        answer: data.answerMulti,
-      };
-    } else if (data.type === 'true_false') {
-      payload = {
-        ...common,
-        type: data.type,
-        content: { stem: data.contentStem },
-        answer: data.answerBool === 'true',
-      };
-    } else {
-      payload = {
-        ...common,
-        type: data.type,
-        content: { stem: data.contentStem },
-        answer: { accepts: parseTags((data as any).answerAccepts) },
-      };
-    }
-    const res = await fetch('/api/quizzes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const out = await res.json();
-    setResp(out);
-  };
-
-  const onBatch = async () => {
+  const extractArticle = async () => {
+    if (!url.trim()) return;
+    setExtracting(true);
+    setQuestions([]);
+    setSelected(new Set());
+    setTitle('');
+    setContent('');
+    setDebug(null);
     try {
-      const payload = JSON.parse(batchJson);
-      const res = await fetch('/api/quizzes/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      const out = await res.json();
-      setResp(out);
-    } catch (e) {
-      setResp({ error: String(e) });
-    }
-  };
-
-  const batchPreview = useMemo(() => {
-    if (!batchJson.trim()) return { pretty: '', errors: [] as string[], stats: null as any };
-    try {
-      const data = JSON.parse(batchJson);
-      const errs: string[] = [];
-      if (!data || typeof data !== 'object') errs.push('JSON 不是对象');
-      if (!data.version) errs.push('缺少 version');
-      if (!Array.isArray(data.questions) || data.questions.length === 0) errs.push('questions 必须为非空数组');
-      const total = Array.isArray(data.questions) ? data.questions.length : 0;
-      let singles = 0, multiples = 0, booleans = 0;
-      if (Array.isArray(data.questions)) {
-        for (const q of data.questions) {
-          if (q?.type === 'single') singles++;
-          else if (q?.type === 'multiple') multiples++;
-          else if (q?.type === 'boolean') booleans++;
-          if (!q?.id) errs.push('存在题目缺少 id');
-          if (!q?.content) errs.push(`题 ${q?.id || '?'} 缺少 content`);
-          if (!Array.isArray(q?.options) || q.options.length < 2) errs.push(`题 ${q?.id || '?'} options 至少 2 项`);
-          if (!Array.isArray(q?.answer)) errs.push(`题 ${q?.id || '?'} answer 必须为数组`);
-        }
+      const res = await fetch('/api/article-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTitle((data?.title || '').trim());
+        setAuthor((data?.author || '')?.trim() || undefined);
+        setContent((data?.content || '').trim());
+        try { console.log('[Extract Preview]', { title: data?.title, author: data?.author }); } catch {}
+        setDebug({
+          source: 'direct',
+          matchedArticleRoot: true,
+          excerpt: (data?.content || '').slice(0, 200),
+          full: data?.content || '',
+        });
+      } else {
+        setDebug({ source: 'direct', matchedArticleRoot: false, excerpt: '', full: '' });
       }
-      return { pretty: JSON.stringify(data, null, 2), errors: Array.from(new Set(errs)), stats: { total, singles, multiples, booleans } };
-    } catch (e: any) {
-      return { pretty: '', errors: [String(e?.message || e)], stats: null };
+    } finally {
+      setExtracting(false);
     }
-  }, [batchJson]);
+  };
 
-  const livePreview = (() => {
-    const data = watch();
+  const genPreview = async () => {
+    if (!content) return;
+    setGenerating(true);
+    setToast({ message: '正在生成题目，预计 30–60 秒…', tone: 'info' });
+    setQuestions([]);
+    setSelected(new Set());
     try {
-      const common = { title: data.title, explanation: (data as any).explanation, tags: parseTags((data as any).tags) } as any;
-      if (data.type === 'single_choice') return { ...common, type: data.type, content: { stem: (data as any).contentStem, options: (data as any).options }, answer: (data as any).answerSingle };
-      if (data.type === 'multi_choice') return { ...common, type: data.type, content: { stem: (data as any).contentStem, options: (data as any).options }, answer: (data as any).answerMulti };
-      if (data.type === 'true_false') return { ...common, type: data.type, content: { stem: (data as any).contentStem }, answer: (data as any).answerBool === 'true' };
-      return { ...common, type: data.type, content: { stem: (data as any).contentStem }, answer: { accepts: parseTags((data as any).answerAccepts) } };
-    } catch {
-      return null;
+      const res = await fetch('/api/generate-from-url/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQuestions(Array.isArray(data?.questions) ? data.questions : []);
+        setToast({ message: '题目生成完成', tone: 'success' });
+      } else {
+        setToast({ message: '生成失败，请稍后重试', tone: 'danger' });
+      }
+    } finally {
+      setGenerating(false);
     }
-  })();
+  };
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const ids = questions.map((q) => q.id);
+    setSelected(new Set(ids));
+  };
+  const clearAll = () => setSelected(new Set());
+
+  const createSet = async () => {
+    if (!canCreate || submitting) return;
+    setSubmitting(true);
+    setToast({ message: '正在创建测验并发布…', tone: 'info' });
+    try {
+      const payload = {
+        url,
+        title,
+        author,
+        selectedQuestions: questions.filter((q) => selected.has(q.id)),
+      };
+      const res = await fetch('/api/generate-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      const slug: string | undefined = data?.set?.slug;
+      if (slug) {
+        await fetch(`/api/sets/${slug}/publish`, { method: 'POST' });
+        setToast({ message: '创建完成，正在跳转…', tone: 'success' });
+        window.location.href = `/set/${slug}`;
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   return (
     <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-semibold">上传题目</h1>
-        <div className="mt-4 grid gap-6 md:grid-cols-2">
-          <form className="space-y-3" onSubmit={handleSubmit(onSubmit)}>
-            <div>
-              <label className="block text-sm text-gray-600">题型</label>
-              <select className="mt-1 w-full rounded border p-2" value={type} onChange={(e) => setType(e.target.value as any)}>
-                <option value="single_choice">单选</option>
-                <option value="multi_choice">多选</option>
-                <option value="true_false">判断</option>
-                <option value="short_answer">简答</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600">标题</label>
-              <input className="mt-1 w-full rounded border p-2" {...register('title')} />
-              {errors.title && <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600">题干</label>
-              <input className="mt-1 w-full rounded border p-2" {...register('contentStem' as any)} />
-              {(errors as any).contentStem && <p className="mt-1 text-xs text-red-600">{(errors as any).contentStem.message}</p>}
-            </div>
-
-            {(type === 'single_choice' || type === 'multi_choice') && (
-              <div>
-                <label className="block text-sm text-gray-600">选项</label>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="mt-1 flex items-center gap-2">
-                    <input
-                      className="w-16 rounded border p-2"
-                      placeholder={`ID`}
-                      value={(watch('options' as any)?.[i]?.id) || String.fromCharCode(65 + i)}
-                      onChange={(e) => {
-                        const arr = [...(watch('options' as any) || emptyOptions())];
-                        arr[i] = { ...(arr[i] || {}), id: e.target.value };
-                        setValue('options' as any, arr as any, { shouldValidate: true });
-                      }}
-                    />
-                    <input
-                      className="flex-1 rounded border p-2"
-                      placeholder={`选项 ${i + 1}`}
-                      value={(watch('options' as any)?.[i]?.text) || ''}
-                      onChange={(e) => {
-                        const arr = [...(watch('options' as any) || emptyOptions())];
-                        arr[i] = { ...(arr[i] || {}), text: e.target.value };
-                        setValue('options' as any, arr as any, { shouldValidate: true });
-                      }}
-                    />
-                    {type === 'single_choice' ? (
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input type="radio" name="answerSingle"
-                               checked={watch('answerSingle' as any) === (watch('options' as any)?.[i]?.id || String.fromCharCode(65 + i))}
-                               onChange={() => setValue('answerSingle' as any, (watch('options' as any)?.[i]?.id || String.fromCharCode(65 + i)))} /> 正确
-                      </label>
-                    ) : (
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input type="checkbox"
-                               checked={Array.isArray((watch('answerMulti' as any))) && (watch('answerMulti' as any))?.includes((watch('options' as any)?.[i]?.id || String.fromCharCode(65 + i)))}
-                               onChange={(e) => {
-                                 const id = (watch('options' as any)?.[i]?.id || String.fromCharCode(65 + i));
-                                 const set = new Set<string>(watch('answerMulti' as any) || []);
-                                 if (e.target.checked) set.add(id); else set.delete(id);
-                                 setValue('answerMulti' as any, Array.from(set), { shouldValidate: true });
-                               }} /> 正确
-                      </label>
-                    )}
-                  </div>
-                ))}
-                {(errors as any).options && <p className="mt-1 text-xs text-red-600">{(errors as any).options.message}</p>}
-                {(errors as any).answerSingle && <p className="mt-1 text-xs text-red-600">{(errors as any).answerSingle.message}</p>}
-                {(errors as any).answerMulti && <p className="mt-1 text-xs text-red-600">{(errors as any).answerMulti.message}</p>}
-              </div>
-            )}
-
-            {type === 'true_false' && (
-              <div>
-                <label className="block text-sm text-gray-600">正确答案</label>
-                <select className="mt-1 w-full rounded border p-2" {...register('answerBool' as any)}>
-                  <option value="true">对</option>
-                  <option value="false">错</option>
-                </select>
-              </div>
-            )}
-
-            {type === 'short_answer' && (
-              <div>
-                <label className="block text-sm text-gray-600">允许答案（逗号分隔，忽略大小写与多空格）</label>
-                <input className="mt-1 w-full rounded border p-2" {...register('answerAccepts' as any)} placeholder="如：HTTP, Hyper Text Transfer Protocol" />
-                {(errors as any).answerAccepts && <p className="mt-1 text-xs text-red-600">{(errors as any).answerAccepts.message}</p>}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm text-gray-600">标签（逗号分隔）</label>
-              <input className="mt-1 w-full rounded border p-2" {...register('tags' as any)} placeholder="web, http, 基础" />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600">解析（可选）</label>
-              <textarea className="mt-1 w-full rounded border p-2" rows={3} {...register('explanation' as any)} />
-            </div>
-
-            <button className="rounded bg-black px-3 py-1 text-white">提交</button>
-          </form>
-
-          <div>
-            <div className="text-sm text-gray-600">实时预览（提交到后端的 JSON）</div>
-            <pre className="mt-2 max-h-[70vh] overflow-auto rounded bg-gray-50 p-3 text-xs">{JSON.stringify(livePreview, null, 2)}</pre>
-            {resp && (
-              <>
-                <pre className="mt-3 max-h-[40vh] overflow-auto rounded bg-gray-100 p-3 text-xs">{JSON.stringify(resp, null, 2)}</pre>
-                {resp.quiz && (
-                  <div className="mt-3">
-                    <Link href="/creator/sets/new" className="inline-block rounded bg-black px-3 py-1 text-white">
-                      去创建题单
-                    </Link>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="mt-8">
-              <div className="mb-2 text-sm font-medium">批量上传（粘贴题集 JSON）</div>
-              <textarea className="h-48 w-full rounded border p-2 font-mono text-xs" value={batchJson} onChange={(e) => setBatchJson(e.target.value)} placeholder='{"version":"1.0","questions":[{"id":"q1","type":"single","content":"...","options":[{"id":"A","text":"..."},{"id":"B","text":"..."}],"answer":["A"]}]}' />
-              <div className="mt-2 flex gap-2">
-                <button className="rounded bg-black px-3 py-1 text-white" onClick={onBatch}>批量提交</button>
-                <a className="rounded border px-3 py-1" href="https://gist.github.com/" target="_blank">示例与校验说明</a>
-              </div>
-              {batchPreview.pretty && (
-                <div className="mt-3">
-                  <div className="mb-1 text-xs text-gray-600">
-                    预览：{batchPreview.stats ? `共 ${batchPreview.stats.total} 题 · 单选 ${batchPreview.stats.singles} · 多选 ${batchPreview.stats.multiples} · 判断 ${batchPreview.stats.booleans}` : ''}
-                  </div>
-                  <pre className="max-h-[40vh] overflow-auto rounded bg-gray-50 p-3 text-xs">{batchPreview.pretty}</pre>
-                  {batchPreview.errors.length > 0 && (
-                    <ul className="mt-2 list-disc pl-5 text-xs text-red-600">
-                      {batchPreview.errors.map((e, i) => (<li key={i}>{e}</li>))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
+      <div className="mx-auto max-w-6xl">
+        <div className="flex flex-col items-center text-center md:items-start md:text-left gap-2">
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
+            从博客 URL 生成并挑选题目
+          </h1>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur px-3 py-1 text-xs md:text-sm text-white/80 ring-1 ring-white/10">
+            <span className="inline-block h-2 w-2 rounded-full bg-white/70" />
+            粘贴文章链接，获取标题与正文预览
           </div>
         </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <Input
+            size="lg"
+            radius="full"
+            variant="bordered"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://juejin.cn/post/xxxxxxxx"
+          />
+          <Button
+            onPress={extractArticle}
+            color="primary"
+            size="lg"
+            radius="full"
+            isDisabled={extracting}
+            isLoading={extracting}
+          >
+            获取文章预览
+          </Button>
+        </div>
+
+        {debug && (
+          <Card className="mt-6 rounded-2xl">
+            <CardHeader className="text-base font-semibold">文章预览</CardHeader>
+            <CardBody className="space-y-3">
+              <div className="text-sm text-gray-600">
+                抓取来源：{debug.source} · 命中 article-root：
+                {debug.matchedArticleRoot ? '是' : '否'}
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-900">标题</div>
+                <div className="text-sm text-gray-800">{title || '（空）'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-900">作者</div>
+                <div className="text-sm text-gray-800">{author || '（未识别）'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-900">正文（前 200 字）</div>
+                <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-default-100 p-3 text-sm text-gray-800">
+                  {debug.excerpt || '（空）'}
+                </pre>
+              </div>
+              {debug.full && (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-sm text-gray-600">
+                    展开查看全文（纯文本）
+                  </summary>
+                  <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-default-50 p-3 text-sm text-gray-800">
+                    {content}
+                  </pre>
+                </details>
+              )}
+              <div className="pt-2 grid grid-cols-[auto_1fr] items-center gap-3">
+                <Button
+                  color="primary"
+                  radius="lg"
+                  onPress={genPreview}
+                  isDisabled={!content}
+                  isLoading={generating}
+                >
+                  基于该文章生成题目预览
+                </Button>
+                <div className="text-xs md:text-sm text-gray-500">
+                  预计需要 30–60 秒，请耐心等待
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {questions.length > 0 && (
+          <section className="mt-8">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-lg font-medium">{title || '预览'}</div>
+                <div className="text-sm text-gray-600">
+                  已选 {selected.size} / {questions.length}（需 ≥ 5）
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="bordered"
+                  onPress={selectAll}
+                  radius="lg"
+                  className="text-white border-white/30 hover:text-white"
+                >
+                  全选
+                </Button>
+                <Button
+                  variant="bordered"
+                  onPress={clearAll}
+                  radius="lg"
+                  className="text-white border-white/30 hover:text-white"
+                >
+                  清空
+                </Button>
+                <Button
+                  color="success"
+                  onPress={createSet}
+                  radius="lg"
+                  isDisabled={!canCreate || submitting}
+                  isLoading={submitting}
+                >
+                  {submitting ? '创建中…' : '创建'}
+                </Button>
+                <div className="text-xs text-gray-500">至少选择 5 题即可创建</div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <Progress
+                aria-label="选题进度"
+                size="sm"
+                radius="lg"
+                value={Math.min(selected.size, 5) * 20}
+                color="success"
+                className="max-w-md"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {questions.map((q, idx) => (
+                <Card
+                  key={q.id}
+                  className={`${
+                    selected.has(q.id) ? 'ring-1 ring-primary-500 bg-primary-50' : ''
+                  } rounded-2xl`}
+                >
+                  <CardBody className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium leading-6">
+                        {idx + 1}. {q.content}
+                      </div>
+                      <label className="inline-flex items-center gap-2 text-sm">
+                        <Checkbox isSelected={selected.has(q.id)} onChange={() => toggle(q.id)} />
+                      </label>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`px-1 text-sm ${
+                          q.type === 'single'
+                            ? 'text-blue-600'
+                            : q.type === 'multiple'
+                            ? 'text-purple-600'
+                            : 'text-green-600'
+                        }`}
+                      >
+                        {q.type === 'single' ? '单选' : q.type === 'multiple' ? '多选' : '判断'}
+                      </span>
+                      <Chip
+                        size="sm"
+                        color={
+                          q.difficulty === 'hard'
+                            ? 'danger'
+                            : q.difficulty === 'medium'
+                            ? 'warning'
+                            : 'success'
+                        }
+                        variant="flat"
+                      >
+                        {q.difficulty || 'easy'}
+                      </Chip>
+                    </div>
+                    <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                      {q.options.map((op) => (
+                        <li key={op.id} className="flex items-start gap-2">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border text-xs font-mono bg-white/70">
+                            {op.id}
+                          </span>
+                          <span className="leading-6">{op.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {q.explanation && (
+                      <div className="mt-2 text-xs text-gray-500">解析：{q.explanation}</div>
+                    )}
+                    <div className="mt-2 text-xs text-gray-500">
+                      类型：{q.type} · 难度：{q.difficulty || 'easy'}
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
+      {toast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 rounded-lg px-4 py-2 text-white shadow-lg ${
+            toast.tone === 'success'
+              ? 'bg-green-600'
+              : toast.tone === 'warning'
+              ? 'bg-yellow-600'
+              : toast.tone === 'danger'
+              ? 'bg-red-600'
+              : 'bg-gray-900'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
     </main>
   );
 }
-

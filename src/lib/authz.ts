@@ -16,3 +16,13 @@ export function hasRole(user: { role: string } | null | undefined, roles: Array<
   return roles.includes(user.role as any);
 }
 
+export function isAddressWhitelisted(address?: string | null): boolean {
+  if (!address) return false;
+  const env = process.env.WHITELIST_ADDRESSES || '';
+  const list = env
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(address.toLowerCase());
+}
+

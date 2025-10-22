@@ -22,17 +22,17 @@ export function Onboarding() {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-        <a href="/set/hello-world" className="card card-hover p-4">
-          <div className="text-lg font-medium">试试示例题单</div>
-          <div className="text-sm text-gray-600">快速体验作答与评分</div>
-        </a>
-        <a href="/quizzes" className="card card-hover p-4">
-          <div className="text-lg font-medium">浏览题库</div>
-          <div className="text-sm text-gray-600">探索更多题目</div>
-        </a>
         <a href="/creator/sets/new" className="card card-hover p-4">
           <div className="text-lg font-medium">创建题单</div>
           <div className="text-sm text-gray-600">组合题目生成分享链接</div>
+        </a>
+        <a href="/upload" className="card card-hover p-4">
+          <div className="text-lg font-medium">上传题目</div>
+          <div className="text-sm text-gray-600">粘贴 JSON 或表单创建</div>
+        </a>
+        <a href="/leaderboard" className="card card-hover p-4">
+          <div className="text-lg font-medium">排行榜</div>
+          <div className="text-sm text-gray-600">周/月/总榜</div>
         </a>
       </div>
     </section>
