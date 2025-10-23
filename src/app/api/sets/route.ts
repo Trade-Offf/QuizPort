@@ -31,5 +31,5 @@ export async function POST(req: Request) {
   return okJson({ set: { id, slug: data.slug, title: data.title, description: data.description, status: 'draft' } });
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
