@@ -1,12 +1,17 @@
 import { normalizeShortAnswer } from '@/lib/schemas';
-import type { Quiz } from '@prisma/client';
+
+export type QuizLike = {
+  id: string;
+  type: 'single_choice' | 'multi_choice' | 'true_false' | 'short_answer';
+  answer: unknown;
+};
 
 export type ScoreResult = {
   quizId: string;
   isCorrect: boolean;
 };
 
-export function scoreQuiz(quiz: Quiz, userAnswer: unknown): boolean {
+export function scoreQuiz(quiz: QuizLike, userAnswer: unknown): boolean {
   switch (quiz.type) {
     case 'single_choice':
       return userAnswer === (quiz.answer as any);
