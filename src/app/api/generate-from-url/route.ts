@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { requireUser, isAddressWhitelisted } from '@/lib/authz';
 import crypto from 'node:crypto';
+import { d1Get, d1Run } from '@/lib/cf';
 
 async function fetchArticle(
   url: string
@@ -235,7 +235,7 @@ export async function POST(req: Request) {
     questions = normalize(questions);
     if (questions.length === 0) questions = normalize(naiveGenerateQuestions(article.content));
 
-    // 批量写入 Quiz
+    // 批量写入 Quiz（D1）
     const createdIds: string[] = [];
     for (const q of questions) {
       const mappedType =
@@ -244,45 +244,57 @@ export async function POST(req: Request) {
           : q.type === 'single'
           ? 'single_choice'
           : 'multi_choice';
-      const created = await prisma.quiz.create({
-        data: {
-          authorId: user.id,
-          title: q.content.slice(0, 60),
-          type: mappedType as any,
-          content: { stem: q.content, options: q.options },
-          answer:
-            mappedType === 'true_false'
-              ? q.answer[0] === 'T'
-              : mappedType === 'single_choice'
-              ? q.answer[0]
-              : q.answer,
-          explanation: q.explanation,
-          tags: ['auto', 'from-url'],
-          status: 'pending',
-        },
-      });
-      createdIds.push(created.id);
+      const id = crypto.randomUUID();
+      await d1Run(
+        'INSERT INTO quizzes (id, author_id, title, type, content, answer, explanation, tags, status, popularity, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id,
+        user.id,
+        q.content.slice(0, 60),
+        mappedType,
+        JSON.stringify({ stem: q.content, options: q.options }),
+        JSON.stringify(
+          mappedType === 'true_false'
+            ? q.answer[0] === 'T'
+            : mappedType === 'single_choice'
+            ? q.answer[0]
+            : q.answer,
+        ),
+        q.explanation ?? null,
+        JSON.stringify(['auto', 'from-url']),
+        'pending',
+        0,
+        new Date().toISOString(),
+      );
+      createdIds.push(id);
     }
 
-    // 为该 URL 生成/复用题单
+    // 为该 URL 生成/复用题单（D1）
     const slug = 'u-' + crypto.createHash('sha1').update(url).digest('hex').slice(0, 10);
-    const set = await prisma.quizSet.upsert({
-      where: { slug },
-      update: {
-        title: resolvedTitle,
-        description: `来源：${url}${resolvedAuthor ? `\n作者：${resolvedAuthor}` : ''}`,
-        quizIds: createdIds,
-      },
-      create: {
+    const exists = await d1Get<any>('SELECT id FROM quiz_sets WHERE slug = ?', slug);
+    if (exists) {
+      await d1Run(
+        'UPDATE quiz_sets SET title = ?, description = ?, quiz_ids = ?, updated_at = ? WHERE slug = ? ',
+        resolvedTitle,
+        `来源：${url}${resolvedAuthor ? `\n作者：${resolvedAuthor}` : ''}`,
+        JSON.stringify(createdIds),
+        new Date().toISOString(),
         slug,
-        title: resolvedTitle,
-        description: `来源：${url}${resolvedAuthor ? `\n作者：${resolvedAuthor}` : ''}`,
-        authorId: user.id,
-        quizIds: createdIds,
-        status: 'private',
-      },
-    });
-
+      );
+    } else {
+      const setId = crypto.randomUUID();
+      await d1Run(
+        'INSERT INTO quiz_sets (id, slug, title, description, author_id, quiz_ids, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        setId,
+        slug,
+        resolvedTitle,
+        `来源：${url}${resolvedAuthor ? `\n作者：${resolvedAuthor}` : ''}`,
+        user.id,
+        JSON.stringify(createdIds),
+        'private',
+        new Date().toISOString(),
+      );
+    }
+    const set = await d1Get<any>('SELECT * FROM quiz_sets WHERE slug = ?', slug);
     return NextResponse.json({ set, quizIds: createdIds });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Internal Error' }, { status: 500 });

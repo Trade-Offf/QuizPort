@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/authz';
 import { okJson, parseJson, unauthorized } from '@/lib/http';
+import { d1Run } from '@/lib/cf';
 
 type BatchInput = {
   version: string;
@@ -37,19 +37,22 @@ export async function POST(req: Request) {
     if (!q.answer.every(a => optionIds.has(a))) continue;
 
     const mappedType = q.type === 'boolean' ? 'true_false' : (q.type === 'single' ? 'single_choice' : 'multi_choice');
-    const created = await prisma.quiz.create({
-      data: {
-        authorId: user.id,
-        title: q.content.slice(0, 60),
-        type: mappedType as any,
-        content: { stem: q.content, options: q.options },
-        answer: mappedType === 'true_false' ? (q.answer[0] === 'T') : (mappedType === 'single_choice' ? q.answer[0] : q.answer),
-        explanation: q.explanation,
-        tags: q.tags || body.tags || [],
-        status: 'pending',
-      }
-    });
-    createdIds.push(created.id);
+    const id = crypto.randomUUID();
+    await d1Run(
+      'INSERT INTO quizzes (id, author_id, title, type, content, answer, explanation, tags, status, popularity, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      id,
+      user.id,
+      q.content.slice(0, 60),
+      mappedType,
+      JSON.stringify({ stem: q.content, options: q.options }),
+      JSON.stringify(mappedType === 'true_false' ? (q.answer[0] === 'T') : (mappedType === 'single_choice' ? q.answer[0] : q.answer)),
+      q.explanation ?? null,
+      JSON.stringify(q.tags || body.tags || []),
+      'pending',
+      0,
+      new Date().toISOString(),
+    );
+    createdIds.push(id);
   }
 
   return okJson({ created: createdIds.length, quizIds: createdIds });

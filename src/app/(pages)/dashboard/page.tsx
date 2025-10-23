@@ -1,13 +1,18 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { d1All, d1Get } from '@/lib/cf';
 import ProfileForm from './profile-form';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const userId = (session as any)?.userId;
-  const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
-  const myQuizzes = userId ? await prisma.quiz.findMany({ where: { authorId: userId }, orderBy: { createdAt: 'desc' }, take: 10 }) : [];
+  const user = userId ? await d1Get<any>('SELECT * FROM users WHERE id = ?', userId) : null;
+  const myQuizzes = userId
+    ? await d1All<any>(
+        'SELECT id, title, status FROM quizzes WHERE author_id = ? ORDER BY created_at DESC LIMIT 10',
+        userId,
+      )
+    : [];
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-4xl space-y-4">
@@ -29,7 +34,7 @@ export default async function DashboardPage() {
         </div>
         <div className="mt-6">
           {/* @ts-expect-error Server Component imports client */}
-          <ProfileForm initial={{ username: user?.username || '', avatarUrl: user?.avatarUrl || '' }} />
+          <ProfileForm initial={{ username: user?.username || '', avatarUrl: user?.avatar_url || '' }} />
         </div>
       </div>
     </main>

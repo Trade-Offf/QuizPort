@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import crypto from 'node:crypto';
 
 export const DEFAULT_POINTS = {
   submit_set: 10,
