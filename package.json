@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cf:build": "next build && npx @cloudflare/next-on-pages",
+    "cf:build": "NPM_CONFIG_CACHE=.npm-cache next build && npx @cloudflare/next-on-pages",
     "cf:dev": "npx wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "cf:deploy": "npx wrangler pages deploy .vercel/output/static --branch=main",
     "prisma:generate": "prisma generate",
