@@ -9,6 +9,11 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   webpack: (config, { isServer }) => {
+    // 避免在任意目标里被误解析进构建
+    config.resolve.alias['@prisma/client'] = false;
+    config.resolve.alias['@prisma/extension-accelerate'] = false;
+    config.resolve.alias['prisma'] = false;
+    config.resolve.alias['@/lib/prisma'] = false;
     if (!isServer) {
       // 避免浏览器端/Edge 构建中解析到仅用于 Node/React Native 的依赖
       config.resolve.alias['pino-pretty'] = false;
