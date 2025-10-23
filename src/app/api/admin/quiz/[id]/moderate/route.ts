@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma';
 import { forbidden, notFound, okJson, parseJson, unauthorized } from '@/lib/http';
 import { hasRole, requireUser } from '@/lib/authz';
+import { d1Get, d1Run } from '@/lib/cf';
 
 export async function POST(req: Request, ctx: any) {
   const user = await requireUser();
@@ -10,15 +10,15 @@ export async function POST(req: Request, ctx: any) {
   const body = await parseJson(req);
   const action = (body?.action as 'approve'|'reject');
   const reason = (body?.reason as string) || undefined;
-  const quiz = await prisma.quiz.findUnique({ where: { id: ctx.params.id } });
+  const quiz = await d1Get<any>('SELECT id, status FROM quizzes WHERE id = ? LIMIT 1', ctx.params.id);
   if (!quiz) return notFound('Quiz not found');
 
   if (action === 'approve') {
-    const updated = await prisma.quiz.update({ where: { id: quiz.id }, data: { status: 'approved' } });
-    return okJson({ quiz: updated });
+    await d1Run('UPDATE quizzes SET status = ? WHERE id = ?', 'approved', quiz.id);
+    return okJson({ quiz: { ...quiz, status: 'approved' } });
   } else if (action === 'reject') {
-    const updated = await prisma.quiz.update({ where: { id: quiz.id }, data: { status: 'rejected', explanation: reason } });
-    return okJson({ quiz: updated });
+    await d1Run('UPDATE quizzes SET status = ?, explanation = ? WHERE id = ?', 'rejected', reason ?? null, quiz.id);
+    return okJson({ quiz: { ...quiz, status: 'rejected', explanation: reason ?? null } });
   } else {
     return okJson({ error: 'Invalid action' }, { status: 400 });
   }
