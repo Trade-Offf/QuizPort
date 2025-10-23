@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma';
 import { okJson } from '@/lib/http';
+import { d1All } from '@/lib/cf';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -7,13 +7,12 @@ export async function GET(req: Request) {
   const limit = Number(url.searchParams.get('limit') || 100);
 
   // MVP：直接按总 points 排行；range 可拓展为基于 PointsLog 时间窗口聚合
-  const users = await prisma.user.findMany({
-    orderBy: { points: 'desc' },
-    take: Math.min(Math.max(limit, 1), 100),
-    select: { id: true, username: true, avatarUrl: true, points: true },
-  });
+  const users = await d1All(
+    'SELECT id, username, avatar_url as avatarUrl, points FROM users ORDER BY points DESC LIMIT ?',
+    Math.min(Math.max(limit, 1), 100),
+  );
   return okJson({ range, users });
 }
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 

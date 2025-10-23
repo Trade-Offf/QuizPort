@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/prisma';
 import { SiweMessage } from 'siwe';
+import { d1Get, d1Run } from '@/lib/cf';
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
@@ -25,27 +25,36 @@ export const authOptions: NextAuthOptions = {
           if (message.uri !== nextAuthUrl.origin) return null;
 
           const nonce = message.nonce;
-          const record = await prisma.siweNonce.findUnique({ where: { value: nonce } });
+          const record = await d1Get<{ value: string; expires_at: string }>(
+            'SELECT value, expires_at FROM siwe_nonces WHERE value = ?',
+            nonce,
+          );
           if (!record) return null;
-          if (record.expiresAt < new Date()) return null;
-
-          // consume nonce
-          await prisma.siweNonce.delete({ where: { value: nonce } });
+          if (new Date(record.expires_at) < new Date()) return null;
+          await d1Run('DELETE FROM siwe_nonces WHERE value = ?', nonce);
 
           const address = message.address.toLowerCase();
-          const user = await prisma.user.upsert({
-            where: { walletAddress: address },
-            update: {},
-            create: {
-              walletAddress: address,
-              username: `user_${address.slice(2, 8)}`,
-            },
-          });
+          let user = await d1Get<{ id: string; username: string; email?: string | null; avatar_url?: string | null }>(
+            'SELECT id, username, email, avatar_url FROM users WHERE wallet_address = ?',
+            address,
+          );
+          if (!user) {
+            const id = crypto.randomUUID();
+            const username = `user_${address.slice(2, 8)}`;
+            await d1Run(
+              'INSERT INTO users (id, wallet_address, username, created_at) VALUES (?, ?, ?, ?)',
+              id,
+              address,
+              username,
+              new Date().toISOString(),
+            );
+            user = { id, username, email: null as any, avatar_url: null as any };
+          }
 
           return {
             id: user.id,
             name: user.username,
-            image: user.avatarUrl || undefined,
+            image: user.avatar_url || undefined,
             email: user.email || undefined,
           };
         } catch (e) {

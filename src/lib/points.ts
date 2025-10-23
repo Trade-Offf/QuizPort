@@ -4,13 +4,27 @@ export const DEFAULT_POINTS = {
   submit_set: 10,
   correct_answer: 2,
   quiz_approved: 5,
-};
+} as const;
 
-export async function awardPoints(userId: string, type: 'submit_set'|'correct_answer'|'quiz_approved', amountOverride?: number, refId?: string) {
+import { d1Run } from '@/lib/cf';
+
+export async function awardPoints(
+  userId: string,
+  type: 'submit_set' | 'correct_answer' | 'quiz_approved',
+  amountOverride?: number,
+  refId?: string,
+) {
   const amount = amountOverride ?? DEFAULT_POINTS[type];
-  await prisma.$transaction([
-    prisma.pointsLog.create({ data: { userId, type, amount, refId } }),
-    prisma.user.update({ where: { id: userId }, data: { points: { increment: amount } } }),
-  ]);
+  const id = crypto.randomUUID();
+  await d1Run(
+    'INSERT INTO points_logs (id, user_id, type, amount, ref_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    id,
+    userId,
+    type,
+    amount,
+    refId ?? null,
+    new Date().toISOString(),
+  );
+  await d1Run('UPDATE users SET points = COALESCE(points, 0) + ? WHERE id = ?', amount, userId);
 }
 

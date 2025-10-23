@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "cf:build": "next build && npx @cloudflare/next-on-pages",
+    "cf:dev": "npx wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
+    "cf:deploy": "npx wrangler pages deploy .vercel/output/static --branch=main",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
@@ -16,10 +19,14 @@
     "@heroui/react": "^2.8.5",
     "@heroui/theme": "^2.4.23",
     "@prisma/client": "^5.19.1",
+    "@prisma/extension-accelerate": "^2.0.2",
     "@rainbow-me/rainbowkit": "^2.2.9",
+    "@tanstack/react-query": "^5.90.5",
     "@wagmi/connectors": "^5.1.7",
     "@wagmi/core": "^2.11.7",
-    "next": "14.2.4",
+    "ethers": "^6.15.0",
+    "framer-motion": "^12.23.24",
+    "next": "15.1.4",
     "next-auth": "^4.24.7",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -30,18 +37,20 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.4",
     "@tailwindcss/postcss": "^4.1.15",
     "@types/node": "^20.16.5",
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.4",
+    "eslint-config-next": "15.1.4",
     "playwright": "^1.56.1",
     "postcss": "^8.5.6",
     "prisma": "^5.19.1",
     "tailwindcss": "^4.1.15",
     "tsx": "^4.19.1",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "wrangler": "^3.76.0"
   }
 }

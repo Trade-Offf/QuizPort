@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardBody, Chip, Link as UiLink, Button } from '@heroui/react';
 import Link from 'next/link';
 import { DebugMeta } from './DebugMeta';
@@ -39,12 +38,18 @@ export default async function SetPage({ params }: { params: { slug: string } }) 
             </div>
           </CardBody>
         </Card>
-        {/* @ts-expect-error Server Component imports client */}
+        {/* 客户端播放器 */}
         <SetPlayerClient setId={set.id} quizzes={quizzes} />
       </div>
     </main>
   );
 }
 
-const SetPlayerClient = dynamic(() => import('./player').then(m => m.SetPlayer), { ssr: false });
+// 分离到客户端组件，避免在 Server Component 中使用 ssr:false 的 dynamic
+function SetPlayerClient(props: { setId: string; quizzes: any[] }) {
+  // 该组件在客户端渲染
+  // 为了保持文件内联，使用懒加载的客户端 wrapper
+  const Client = require('next/dynamic').default(() => import('./player').then(m => m.SetPlayer), { ssr: false });
+  return <Client {...props} />;
+}
 

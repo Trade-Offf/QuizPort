@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { forbidden, notFound, okJson, parseJson, unauthorized } from '@/lib/http';
 import { hasRole, requireUser } from '@/lib/authz';
 
-export async function POST(req: Request, ctx: { params: { id: string } }) {
+export async function POST(req: Request, ctx: any) {
   const user = await requireUser();
   if (!user) return unauthorized();
   if (!hasRole(user, ['admin','moderator'])) return forbidden();

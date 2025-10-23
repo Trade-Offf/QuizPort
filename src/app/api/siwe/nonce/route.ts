@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { d1Run } from '@/lib/cf';
 
 function randomNonce(length = 16): string {
   const bytes = Array.from(crypto.getRandomValues(new Uint8Array(length)));
@@ -9,9 +9,15 @@ function randomNonce(length = 16): string {
 export async function POST() {
   const value = randomNonce(16);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-  await prisma.siweNonce.create({ data: { value, expiresAt } });
+  await d1Run(
+    'INSERT INTO siwe_nonces (id, value, expires_at, created_at) VALUES (?, ?, ?, ?)',
+    crypto.randomUUID(),
+    value,
+    expiresAt.toISOString(),
+    new Date().toISOString(),
+  );
   return NextResponse.json({ nonce: value });
 }
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
