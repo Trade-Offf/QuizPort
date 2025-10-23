@@ -34,7 +34,8 @@
     "three": "^0.180.0",
     "viem": "^2.21.3",
     "wagmi": "^2.12.10",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "vercel": "^37.0.0"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.4",
@@ -51,7 +52,6 @@
     "tailwindcss": "^4.1.15",
     "tsx": "^4.19.1",
     "typescript": "^5.5.4",
-    "wrangler": "^3.76.0",
-    "vercel": "^37.0.0"
+    "wrangler": "^3.76.0"
   }
 }
