@@ -1,6 +1,39 @@
-# QuizPort
+<div align="center">
 
-本地开发快速开始
+# QuizPort · 读完即测的在线题库
+
+一键把文章变成测验，支持多题型、做题历史与分享卡片。
+
+<br />
+
+<img src="public/01-home.png" alt="首页预览" width="900" />
+
+</div>
+
+## 使用指南（面向用户）
+
+1. 打开站点首页，连接钱包完成登录（SIWE）。
+
+2. 进入“上传题目”页，粘贴题目或从文章生成；保存后系统会生成一个题库链接。
+
+3. 在“历史题库”中找到你的题库，点击“开始测试”答题：
+
+- 做题进度与答案会自动缓存，刷新页面不会丢失；
+- 交卷后可按“错题/全部”筛选；
+- 想重来就点“重新挑战”。
+
+4. 分享传播：在历史题库卡片点击“分享”，支持两种形式：
+
+- 卡片形式：包含标题、作者、前三道题、二维码；
+- 复制链接：一键复制直达链接。
+
+<div align="center">
+  <img src="public/02-upload.png" alt="上传页预览" width="900" />
+</div>
+
+---
+
+## 本地开发（面向开发者）
 
 1. 启动数据库（Docker）
 
@@ -33,29 +66,24 @@ npm run db:seed
 npm run dev
 ```
 
-访问：
-
-- 首页：/
-- 题单：/set/hello-world
-- 上传：/upload
-- 管理：/admin
+访问路径：`/`（首页）、`/upload`（上传）、`/history`（历史题库）、`/set/[slug]`（题库播放）。
 
 SIWE 登录须知：
 
 - 浏览器地址栏主机名需与 `SIWE_DOMAIN` 一致（本地为 localhost）。
 - `NEXTAUTH_URL` 必须与实际访问的 origin 一致（本地为 http://localhost:3000）。
-- 浏览器需安装钱包（注入式）。
+- 浏览器需安装注入式钱包（如 MetaMask）。
+
+---
 
 ## 批量上传题目（JSON v1.0）
 
 接口：`POST /api/quizzes/batch`
 
-顶层结构：
+<details>
+<summary>查看示例与字段说明</summary>
 
-- version: 模式版本号
-- quizId: 本次上传题集 ID（可选）
-- title/description/tags: 题集元信息（可选）
-- questions: 题目数组（必填）
+顶层结构：version / quizId / title / description / tags / questions[]
 
 示例：
 
@@ -72,84 +100,33 @@ SIWE 登录须知：
       "type": "single",
       "content": "以下哪个 Hook 用于管理函数组件内部状态？",
       "options": [
-        {"id": "A", "text": "useState"},
-        {"id": "B", "text": "useMemo"},
-        {"id": "C", "text": "useCallback"},
-        {"id": "D", "text": "useRef"}
+        { "id": "A", "text": "useState" },
+        { "id": "B", "text": "useMemo" },
+        { "id": "C", "text": "useCallback" },
+        { "id": "D", "text": "useRef" }
       ],
-      "answer": ["A"],
-      "explanation": "useState 用于管理本地状态；useMemo/useCallback 为缓存；useRef 持有可变引用。",
-      "difficulty": "easy",
-      "tags": ["react", "hooks"]
-    },
-    {
-      "id": "q2",
-      "type": "multiple",
-      "content": "下列哪些属于副作用，需要在 useEffect 中处理？",
-      "options": [
-        {"id": "A", "text": "订阅事件"},
-        {"id": "B", "text": "更新 DOM"},
-        {"id": "C", "text": "计算派生状态"},
-        {"id": "D", "text": "网络请求"}
-      ],
-      "answer": ["A","B","D"],
-      "explanation": "副作用包含与外部世界交互的操作，如订阅、DOM、请求；纯计算通常不应放入 effect。",
-      "difficulty": "medium",
-      "tags": ["react", "effects"]
-    },
-    {
-      "id": "q3",
-      "type": "boolean",
-      "content": "React 组件的 props 是可变的（mutable）。",
-      "options": [
-        {"id": "T", "text": "True"},
-        {"id": "F", "text": "False"}
-      ],
-      "answer": ["F"],
-      "explanation": "props 应视为只读；状态用 state 管理。",
-      "difficulty": "easy",
-      "tags": ["react", "props"]
-    }
-  ]
-}
-```
-
-字段规范：
-
-- id: 题目/选项唯一标识（字符串）
-- type: `single` | `multiple` | `boolean`
-- content: 题干文本；如需富文本可加 `contentType: "markdown"`
-- options: 统一为选项数组（判断题用 T/F 选项）
-- answer: 正确选项 ID 列表（数组）
-  - single: 恰好 1 个
-  - multiple: ≥2 个
-  - boolean: 必须是 `["T"]` 或 `["F"]`，且 options 中存在对应项
-- explanation/difficulty/tags: 可选
-
-校验要点（服务端已实现）：
-
-- `questions` 为非空数组
-- 每题包含 `id/type/content/options/answer`
-- `answer` 中每个值必须存在于 `options[].id`
-- 版本兼容：保留 `version` 字段；新增字段一律可选
-
-判分逻辑（MVP）：严格集合匹配（用户选择集合 == answer 集合），不做部分得分。
-
-最小可用模板：
-
-```json
-{
-  "version": "1.0",
-  "questions": [
-    {
-      "id": "q1",
-      "type": "single",
-      "content": "题干……",
-      "options": [{"id":"A","text":"选项1"},{"id":"B","text":"选项2"}],
       "answer": ["A"]
     }
   ]
 }
 ```
 
+判分逻辑（MVP）：严格集合匹配（用户选择集合 == answer 集合）。
+
+</details>
+
 前端使用：在“上传题目”页右侧的“批量上传（粘贴题集 JSON）”区域粘贴上述 JSON，点击“批量提交”即可。
+
+---
+
+## 功能特性
+
+- 多题型：单选/多选/判断/简答
+- 做题进度缓存与“重新挑战”
+- 结果页筛选（错题/全部）
+- 历史题库与分享（卡片 + 复制链接）
+- 钱包登录（SIWE）与积分策略（可扩展）
+
+## 许可证
+
+MIT

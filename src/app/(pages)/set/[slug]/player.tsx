@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, RadioGroup, Radio, CheckboxGroup, Checkbox, Input, Card, CardBody, Progress, CardHeader, Chip, Select, SelectItem } from '@heroui/react';
 
 type Quiz = {
@@ -17,6 +17,7 @@ export function SetPlayer({ setId, quizzes }: { setId: string; quizzes: Quiz[] }
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [resultFilter, setResultFilter] = useState<'all' | 'wrong'>('all');
+  const storageKey = useMemo(() => `qp_set_progress:${setId}`, [setId]);
 
   const current = quizzes[index];
   const progress = `${index + 1} / ${quizzes.length}`;
@@ -44,6 +45,22 @@ export function SetPlayer({ setId, quizzes }: { setId: string; quizzes: Quiz[] }
     setAnswers((prev) => ({ ...prev, [qid]: value }));
   };
 
+  // 加载已完成缓存（如存在）
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && data.setId === setId) {
+          setAnswers(data.answers || {});
+          setResult(data.result || null);
+          setResultFilter(data.resultFilter || 'all');
+          setIndex(0);
+        }
+      }
+    } catch {}
+  }, [storageKey, setId]);
+
   const submit = async () => {
     setSubmitting(true);
     try {
@@ -52,7 +69,14 @@ export function SetPlayer({ setId, quizzes }: { setId: string; quizzes: Quiz[] }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quizSetId: setId, answers }),
       });
-      setResult(await res.json());
+      const data = await res.json();
+      setResult(data);
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({ setId, answers, result: data, resultFilter })
+        );
+      } catch {}
     } finally {
       setSubmitting(false);
     }
@@ -116,6 +140,20 @@ export function SetPlayer({ setId, quizzes }: { setId: string; quizzes: Quiz[] }
                   得分 {result.score} / {quizzes.length} · 正确 {result.correctCount}
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="solid"
+                    className="bg-white text-black"
+                    onPress={() => {
+                      setAnswers({});
+                      setResult(null);
+                      setIndex(0);
+                      setResultFilter('all');
+                      try { localStorage.removeItem(storageKey); } catch {}
+                    }}
+                  >
+                    重新挑战
+                  </Button>
                   <span className="text-sm text-white/70">筛选</span>
                   <Select
                     size="sm"

@@ -5,13 +5,31 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet, sepolia } from 'wagmi/chains';
 import { injected } from '@wagmi/connectors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SessionProvider } from 'next-auth/react';
-import { RainbowKitProvider, getDefaultConfig, lightTheme } from '@rainbow-me/rainbowkit';
+import { SessionProvider, useSession } from 'next-auth/react';
+import { RainbowKitProvider, lightTheme } from '@rainbow-me/rainbowkit';
 import { HeroUIProvider } from '@heroui/react';
 import '@rainbow-me/rainbowkit/styles.css';
 import { BlockieAvatar } from '@/components/BlockieAvatar';
 import { AutoSiwe } from '@/components/AutoSiwe';
 import { AutoSignoutOnDisconnect } from '@/components/AutoSignoutOnDisconnect';
+import { useEffect } from 'react';
+
+function ClearQuizCacheOnLogout() {
+  const { status } = useSession();
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      try {
+        const keys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('qp_set_progress:')) keys.push(k);
+        }
+        for (const k of keys) localStorage.removeItem(k);
+      } catch {}
+    }
+  }, [status]);
+  return null;
+}
 
 const wagmiConfig = createConfig({
   chains: [sepolia, mainnet],
@@ -33,6 +51,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
             <HeroUIProvider navigate={(...args: any[]) => (router.push as any)(...args)}>
               <AutoSiwe />
               <AutoSignoutOnDisconnect />
+              <ClearQuizCacheOnLogout />
               {children}
             </HeroUIProvider>
           </RainbowKitProvider>
