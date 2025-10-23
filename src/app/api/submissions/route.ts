@@ -65,5 +65,5 @@ export async function POST(req: Request) {
   return okJson({ score, correctCount, pointsAwarded, breakdown: results });
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
