@@ -1,12 +1,27 @@
-import { getRequestContext } from '@cloudflare/next-on-pages';
-
 export type EnvBindings = {
   DB: D1Database;
   QUIZPORT_KV: KVNamespace;
 };
 
 export function getEnv(): EnvBindings {
-  return getRequestContext().env as unknown as EnvBindings;
+  // Prefer OpenNext / Workers global
+  try {
+    const g: any = globalThis as any;
+    if (g && g.ENV) return g.ENV as EnvBindings;
+    if (g && g.env) return g.env as EnvBindings;
+  } catch {}
+
+  // Fallback: next-on-pages (if present in some environments)
+  try {
+    const pkgName = '@cloudflare/next-on-pages';
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require(pkgName);
+    if (mod?.getRequestContext) {
+      return mod.getRequestContext().env as EnvBindings;
+    }
+  } catch {}
+
+  throw new Error('Cloudflare Env bindings not available in this environment');
 }
 
 export async function d1All<T = any>(sql: string, ...binds: any[]): Promise<T[]> {
