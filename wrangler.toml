@@ -1,7 +1,7 @@
 name = "quizport"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".open-next"
+pages_build_output_dir = ".vercel/output/static"
 
 [vars]
 # 在 Cloudflare Dashboard 的 Pages/Workers 环境变量里设置私密变量
