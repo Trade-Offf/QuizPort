@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "build:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --minify",
-    "cf:build": "NPM_CONFIG_CACHE=.npm-cache NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 npx open-next@latest build --target=cloudflare-pages && node tools/inject-routes.js",
+    "cf:build": "NPM_CONFIG_CACHE=.npm-cache NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 npx open-next@3.1.0 build --target=cloudflare-pages",
     "cf:dev": "npx wrangler pages dev .open-next --compatibility-flag=nodejs_compat",
     "cf:deploy": "npx wrangler pages deploy .open-next --branch=main"
   },
