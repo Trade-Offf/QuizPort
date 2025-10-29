@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "build:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --minify",
-    "cf:build": "NPM_CONFIG_CACHE=.npm-cache NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 npm run build:css && npx @opennextjs/opennext@latest build --platform=cloudflare",
+    "cf:build": "NPM_CONFIG_CACHE=.npm-cache NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 npm run build:css && open-next build --target=cloudflare-pages",
     "cf:dev": "npx wrangler pages dev .open-next --compatibility-flag=nodejs_compat",
     "cf:deploy": "npx wrangler pages deploy .open-next --branch=main"
   },
@@ -38,6 +38,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "open-next": "^3.0.0",
     "@tailwindcss/cli": "^4.1.16",
     "@types/node": "^20.16.5",
     "@types/react": "18.3.5",
