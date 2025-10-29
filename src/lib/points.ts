@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { dbExecute } from '@/lib/db';
 
 export const DEFAULT_POINTS = {

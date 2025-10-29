@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireUser, isAddressWhitelisted } from '@/lib/authz';
-import crypto from 'node:crypto';
+// Edge-safe crypto utilities
+async function sha1Hex(input: string): Promise<string> {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-1', enc.encode(input));
+  const bytes = new Uint8Array(buf);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 import { dbQueryOne, dbExecute } from '@/lib/db';
 
 async function fetchArticle(
@@ -270,7 +276,7 @@ export async function POST(req: Request) {
     }
 
     // 为该 URL 生成/复用题单（D1）
-    const slug = 'u-' + crypto.createHash('sha1').update(url).digest('hex').slice(0, 10);
+    const slug = 'u-' + (await sha1Hex(url)).slice(0, 10);
     const exists = await dbQueryOne<any>('SELECT id FROM quiz_sets WHERE slug = ?', slug);
     if (exists) {
       await dbExecute(
