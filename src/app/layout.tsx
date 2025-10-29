@@ -1,4 +1,4 @@
-import './globals.css';
+import './tw.gen.css';
 import type { Metadata } from 'next';
 import { ReactNode } from 'react';
 import { AppProviders } from '@/components/providers/AppProviders';
