@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cf:build": "NPM_CONFIG_CACHE=.npm-cache LIGHTNINGCSS_FORCE_WASM=1 next build && npx @cloudflare/next-on-pages",
+    "cf:build": "NPM_CONFIG_CACHE=.npm-cache TAILWIND_DISABLE_LIGHTNINGCSS=1 NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 next build && npx @cloudflare/next-on-pages",
     "cf:dev": "npx wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "cf:deploy": "npx wrangler pages deploy .vercel/output/static --branch=main"
   },
@@ -50,5 +50,9 @@
     "tsx": "^4.19.1",
     "typescript": "^5.5.4",
     "wrangler": "^3.76.0"
+  }
+  ,
+  "overrides": {
+    "lightningcss": "^1.28.0"
   }
 }
