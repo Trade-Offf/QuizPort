@@ -39,6 +39,7 @@
     "@types/node": "^20.16.5",
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
+    "lightningcss-wasm": "^1.28.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
     "eslint-config-next": "15.1.4",
