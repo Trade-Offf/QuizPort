@@ -1,5 +1,4 @@
 name = "quizport"
-account_id = "3a0a3a8c2e5d8ccfe3b2620ed2d0ba0d"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".open-next"
