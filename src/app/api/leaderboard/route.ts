@@ -1,5 +1,5 @@
 import { okJson } from '@/lib/http';
-import { d1All } from '@/lib/cf';
+import { dbQuery } from '@/lib/db';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -7,12 +7,12 @@ export async function GET(req: Request) {
   const limit = Number(url.searchParams.get('limit') || 100);
 
   // MVP：直接按总 points 排行；range 可拓展为基于 PointsLog 时间窗口聚合
-  const users = await d1All(
-    'SELECT id, username, avatar_url as avatarUrl, points FROM users ORDER BY points DESC LIMIT ?',
+  const users = await dbQuery(
+    'SELECT id, username, "avatarUrl", points FROM users ORDER BY points DESC LIMIT ?',
     Math.min(Math.max(limit, 1), 100),
   );
   return okJson({ range, users });
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 

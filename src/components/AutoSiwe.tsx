@@ -18,19 +18,36 @@ export function AutoSiwe() {
   const attemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isConnected || !address) return;
+    console.log('[AutoSiwe] Effect triggered, isConnected:', isConnected, 'address:', address, 'status:', status);
+    
+    if (!isConnected || !address) {
+      console.log('[AutoSiwe] Not connected or no address');
+      return;
+    }
     // 已有有效 session 时不重复签名；仅在显式未认证时触发
-    if (status === 'authenticated') return;
-    if (status === 'loading') return; // 等待会话状态确定，避免闪签
-    if (attemptedRef.current === address) return; // prevent repeat
+    if (status === 'authenticated') {
+      console.log('[AutoSiwe] Already authenticated');
+      return;
+    }
+    if (status === 'loading') {
+      console.log('[AutoSiwe] Session loading');
+      return; // 等待会话状态确定，避免闪签
+    }
+    if (attemptedRef.current === address) {
+      console.log('[AutoSiwe] Already attempted for this address');
+      return; // prevent repeat
+    }
 
     const schedule = () => {
       const t = setTimeout(async () => {
         try {
+          console.log('[AutoSiwe] Starting SIWE flow...');
           attemptedRef.current = address;
           const nonce = await fetchNonce();
+          console.log('[AutoSiwe] Got nonce:', nonce);
           const domain = window.location.hostname;
           const origin = window.location.origin;
+          console.log('[AutoSiwe] Domain:', domain, 'Origin:', origin);
           const message = new SiweMessage({
             domain,
             address,
@@ -40,9 +57,13 @@ export function AutoSiwe() {
             chainId: chainId || 1,
             nonce,
           });
+          console.log('[AutoSiwe] Requesting signature...');
           const signature = await signMessageAsync({ message: message.prepareMessage() });
-          await signIn('credentials', { redirect: false, message: JSON.stringify(message), signature });
-        } catch {
+          console.log('[AutoSiwe] Got signature, signing in...');
+          const result = await signIn('credentials', { redirect: false, message: JSON.stringify(message), signature });
+          console.log('[AutoSiwe] Sign in result:', result);
+        } catch (error) {
+          console.error('[AutoSiwe] Error:', error);
           // ignore; user may cancel signature
         }
       }, 0); // 推迟到 hydration 之后，避免在 Hydrate 渲染中触发状态更新

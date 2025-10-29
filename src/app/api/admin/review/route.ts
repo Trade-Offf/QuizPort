@@ -1,6 +1,6 @@
 import { forbidden, okJson, unauthorized } from '@/lib/http';
 import { hasRole, requireUser } from '@/lib/authz';
-import { d1All } from '@/lib/cf';
+import { dbQuery } from '@/lib/db';
 
 export async function GET(req: Request) {
   const user = await requireUser();
@@ -9,8 +9,8 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const status = (url.searchParams.get('status') || 'pending') as 'pending'|'draft'|'approved'|'rejected';
-  const items = await d1All(
-    'SELECT id, author_id, title, type, content, answer, explanation, tags, status, popularity, created_at, updated_at FROM quizzes WHERE status = ? ORDER BY created_at ASC',
+  const items = await dbQuery(
+    'SELECT id, "authorId", title, type, content, answer, explanation, tags, status, popularity, "createdAt", "updatedAt" FROM quizzes WHERE status = ? ORDER BY "createdAt" ASC',
     status,
   );
   return okJson({ items });

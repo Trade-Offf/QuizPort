@@ -46,12 +46,18 @@ export function SiweLoginButton() {
       });
 
       const signature = await signMessageAsync({ message: message.prepareMessage() });
+      console.log('[SIWE] Signing in with credentials...');
       const res = await signIn('credentials', {
         redirect: false,
         message: JSON.stringify(message),
         signature,
       });
-      if (!res?.ok) throw new Error('SIWE 登录失败');
+      console.log('[SIWE] Sign in result:', res);
+      if (!res?.ok) {
+        console.error('[SIWE] Sign in failed:', res?.error);
+        throw new Error('SIWE 登录失败: ' + res?.error);
+      }
+      console.log('[SIWE] Sign in successful!');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import { requireUser } from '@/lib/authz';
 import { okJson, parseJson, unauthorized } from '@/lib/http';
-import { d1Run } from '@/lib/cf';
+import { dbExecute } from '@/lib/db';
 
 type BatchInput = {
   version: string;
@@ -38,8 +38,8 @@ export async function POST(req: Request) {
 
     const mappedType = q.type === 'boolean' ? 'true_false' : (q.type === 'single' ? 'single_choice' : 'multi_choice');
     const id = crypto.randomUUID();
-    await d1Run(
-      'INSERT INTO quizzes (id, author_id, title, type, content, answer, explanation, tags, status, popularity, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    await dbExecute(
+      'INSERT INTO quizzes (id, "authorId", title, type, content, answer, explanation, tags, status, popularity, "createdAt") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::timestamp)',
       id,
       user.id,
       q.content.slice(0, 60),

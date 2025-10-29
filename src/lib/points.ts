@@ -1,12 +1,11 @@
 import crypto from 'node:crypto';
+import { dbExecute } from '@/lib/db';
 
 export const DEFAULT_POINTS = {
   submit_set: 10,
   correct_answer: 2,
   quiz_approved: 5,
 } as const;
-
-import { d1Run } from '@/lib/cf';
 
 export async function awardPoints(
   userId: string,
@@ -16,8 +15,8 @@ export async function awardPoints(
 ) {
   const amount = amountOverride ?? DEFAULT_POINTS[type];
   const id = crypto.randomUUID();
-  await d1Run(
-    'INSERT INTO points_logs (id, user_id, type, amount, ref_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+  await dbExecute(
+    'INSERT INTO points_logs (id, "userId", type, amount, "refId", "createdAt") VALUES (?, ?, ?, ?, ?, ?::timestamp)',
     id,
     userId,
     type,
@@ -25,6 +24,6 @@ export async function awardPoints(
     refId ?? null,
     new Date().toISOString(),
   );
-  await d1Run('UPDATE users SET points = COALESCE(points, 0) + ? WHERE id = ?', amount, userId);
+  await dbExecute('UPDATE users SET points = COALESCE(points, 0) + ? WHERE id = ?', amount, userId);
 }
 

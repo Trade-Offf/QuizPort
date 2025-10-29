@@ -9,8 +9,9 @@ async function getData(slug: string) {
   return res.json();
 }
 
-export default async function SetPage({ params }: { params: { slug: string } }) {
-  const data = await getData(params.slug);
+export default async function SetPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const data = await getData(slug);
   if (!data) notFound();
   const { set, quizzes } = data;
   const urlMatch = (set.description || '').match(/来源：([^\n\s]+)/);

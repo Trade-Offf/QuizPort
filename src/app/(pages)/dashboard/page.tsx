@@ -1,14 +1,14 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { d1All, d1Get } from '@/lib/cf';
+import { dbQuery, dbQueryOne } from '@/lib/db';
 import ProfileForm from './profile-form';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const userId = (session as any)?.userId;
-  const user = userId ? await d1Get<any>('SELECT * FROM users WHERE id = ?', userId) : null;
+  const user = userId ? await dbQueryOne<any>('SELECT * FROM users WHERE id = ?', userId) : null;
   const myQuizzes = userId
-    ? await d1All<any>(
+    ? await dbQuery<any>(
         'SELECT id, title, status FROM quizzes WHERE author_id = ? ORDER BY created_at DESC LIMIT 10',
         userId,
       )

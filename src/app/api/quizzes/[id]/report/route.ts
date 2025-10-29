@@ -1,18 +1,19 @@
 import { okJson, parseJson, unauthorized, validate, notFound } from '@/lib/http';
 import { requireUser } from '@/lib/authz';
 import { reportSchema } from '@/lib/schemas';
-import { d1Get, d1Run } from '@/lib/cf';
+import { dbQueryOne, dbExecute } from '@/lib/db';
 
-export async function POST(req: Request, ctx: { params: { id: string } }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id: quizId } = await ctx.params;
   const user = await requireUser();
   if (!user) return unauthorized();
-  const quiz = await d1Get<any>('SELECT id FROM quizzes WHERE id = ?', ctx.params.id);
+  const quiz = await dbQueryOne<any>('SELECT id FROM quizzes WHERE id = ?', quizId);
   if (!quiz) return notFound('Quiz not found');
   const body = await parseJson(req);
   const data = validate(reportSchema, body);
   const id = crypto.randomUUID();
-  await d1Run(
-    'INSERT INTO reports (id, reporter_id, target_type, target_id, reason, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  await dbExecute(
+    'INSERT INTO reports (id, "reporterId", "targetType", "targetId", reason, status, "createdAt") VALUES (?, ?, ?, ?, ?, ?, ?::timestamp)',
     id,
     user.id,
     'quiz',

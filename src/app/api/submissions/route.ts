@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/authz';
 import { aggregateScore, scoreQuiz } from '@/lib/scoring';
 import { awardPoints } from '@/lib/points';
 import { startOfDayKey } from '@/lib/date';
-import { d1Get, d1All, d1Run } from '@/lib/cf';
+import { dbQueryOne, dbQuery, dbExecute } from '@/lib/db';
 
 export async function POST(req: Request) {
   const user = await requireUser();
@@ -12,15 +12,15 @@ export async function POST(req: Request) {
   const body = await parseJson(req);
   const data = validate(submissionSchema, body);
 
-  const set = await d1Get<any>(
-    'SELECT id, quiz_ids as quizIds, status FROM quiz_sets WHERE id = ?',
+  const set = await dbQueryOne<any>(
+    'SELECT id, "quizIds", status FROM quiz_sets WHERE id = ?',
     data.quizSetId,
   );
   if (!set || set.status !== 'public') return notFound('Set not found');
   const ids: string[] = Array.isArray(set.quizIds) ? set.quizIds : JSON.parse(set.quizIds || '[]');
   const placeholders = ids.map(() => '?').join(',');
   const quizzes = ids.length
-    ? await d1All<any>(
+    ? await dbQuery<any>(
         `SELECT id, type, content, answer FROM quizzes WHERE id IN (${placeholders})`,
         ...ids,
       )
@@ -30,8 +30,8 @@ export async function POST(req: Request) {
   const { score, correctCount } = aggregateScore(results);
 
   const submissionId = crypto.randomUUID();
-  await d1Run(
-    'INSERT INTO submissions (id, user_id, quiz_set_id, answers, score, correct_count, duration_sec, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  await dbExecute(
+    'INSERT INTO submissions (id, "userId", "quizSetId", answers, score, "correctCount", "durationSec", "createdAt") VALUES (?, ?, ?, ?, ?, ?, ?, ?::timestamp)',
     submissionId,
     user.id,
     set.id,
@@ -45,8 +45,8 @@ export async function POST(req: Request) {
   // 积分规则
   let pointsAwarded = 0;
   const dayKey = startOfDayKey(new Date());
-  const dailyExists = await d1Get<any>(
-    'SELECT id FROM points_logs WHERE user_id = ? AND type = ? AND ref_id = ? LIMIT 1',
+  const dailyExists = await dbQueryOne<any>(
+    'SELECT id FROM points_logs WHERE "userId" = ? AND type = ?::"PointsLogType" AND "refId" = ? LIMIT 1',
     user.id,
     'submit_set',
     `${set.id}:${dayKey}`,

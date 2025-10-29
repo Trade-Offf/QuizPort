@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/authz';
-import crypto from 'node:crypto';
 
 function stripCodeFences(s: string) {
   return s.replace(/```json[\s\S]*?\n|```/g, '').trim();
@@ -69,20 +67,58 @@ async function fetchArticle(url: string): Promise<Article> {
 async function generateWithDeepSeek(text: string, title: string) {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) return null;
-  const system = '你是资深出题官。只输出严格 JSON，不要任何多余文字、解释、代码块标记或 Markdown。语言：简体中文；题型：single/multiple/boolean；数量：10-15。';
-  const user = `请基于文章生成 10-15 道练习题，覆盖核心概念与易错点，难度分布：easy 60%、medium 30%、hard 10%。输出：{"version":"1.0","title":"${title}","questions":[{"id":"q1","type":"single|multiple|boolean","content":"...","options":[{"id":"A","text":"..."}],"answer":["A"],"explanation":"...","difficulty":"easy|medium|hard","tags":["..."]}]}
-约束：boolean 使用 options=[{"id":"T","text":"True"},{"id":"F","text":"False"}] 且 answer 为 ["T"] 或 ["F"]；single 恰 1 个答案；multiple 至少 2 个答案；禁止无关内容；禁止 Markdown。
-文章片段：\n${text.slice(0, 16000)}`;
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: process.env.DEEPSEEK_MODEL || 'deepseek-chat', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2 })
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content as string | undefined;
-  if (!content) return null;
-  try { return JSON.parse(stripCodeFences(content)); } catch { return null; }
+  
+  const system = `你是一位专业的题目生成专家。请仔细阅读文章内容，基于文章中的具体知识点、概念、细节来生成高质量的练习题。
+
+要求：
+1. 必须生成10-15道题目，题目内容必须紧密围绕文章中的知识点
+2. 题目要具体，不能泛泛而谈，要基于文章中的实际内容
+3. 每道题目的题干和选项都必须有明确的依据来自文章
+4. 题型混合：single（单选）、multiple（多选）、boolean（判断）
+5. 难度分布：easy 60%、medium 30%、hard 10%
+6. 语言：简体中文
+7. 只输出严格 JSON，不要任何多余文字、解释、代码块标记或 Markdown
+
+输出格式：
+{"version":"1.0","title":"${title}","questions":[{"id":"q1","type":"single|multiple|boolean","content":"...","options":[{"id":"A","text":"..."}],"answer":["A"],"explanation":"简短解析（说明答案原因）","difficulty":"easy|medium|hard","tags":["相关标签"]}]}
+
+约束：
+- boolean题使用 options=[{"id":"T","text":"True"},{"id":"F","text":"False"}]，answer为["T"]或["F"]
+- single题：恰1个答案
+- multiple题：至少2个答案
+- explanation必须简短明确（8-30字）
+- 禁止生成无关内容
+- 禁止使用Markdown格式`;
+
+  const user = `请基于以下文章内容，生成10-15道高质量的练习题。题目必须严格基于文章中的知识点、概念、步骤、方法等具体内容，不能使用通用的占位问题。
+
+文章标题：${title}
+
+文章内容：
+${text.slice(0, 16000)}
+
+请生成10-15道基于文章实际内容的题目，确保每道题都有明确的文章依据。`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+  
+  try {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: process.env.DEEPSEEK_MODEL || 'deepseek-chat', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2 }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content as string | undefined;
+    if (!content) return null;
+    try { return JSON.parse(stripCodeFences(content)); } catch { return null; }
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error('[generateWithDeepSeek] Error:', error);
+    return null;
+  }
 }
 
 function normalize(raw: any, fallbackTitle: string) {
@@ -103,25 +139,38 @@ function normalize(raw: any, fallbackTitle: string) {
     const tags = Array.isArray(q?.tags) ? q.tags.slice(0, 3) : [];
     return [{ id: q?.id || `q_${idx + 1}`, type, content, options, answer, explanation: q?.explanation || '', difficulty, tags }];
   });
-  return arr.slice(0, 15);
+  // 确保至少有10道题目
+  const result = arr.slice(0, 15);
+  if (result.length < 10) {
+    console.log(`[normalize] Only normalized ${result.length} questions, expected at least 10`);
+  }
+  return result;
 }
 
 export async function POST(req: Request) {
   try {
-    const user = await requireUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    console.log('[generate-from-url/preview] Starting...');
     const { title, content } = await req.json();
     if (!content || typeof content !== 'string') return NextResponse.json({ error: 'Invalid content' }, { status: 400 });
     const safeTitle = (typeof title === 'string' && title.trim()) ? title.trim() : '未命名文章';
     const ai = await generateWithDeepSeek(content, safeTitle);
     const questions = normalize(ai ?? { questions: [] }, safeTitle);
-    // 若空则构造占位3题
-    const fallback = [
-      { id: 'q_bool', type: 'boolean', content: '这篇文章与技术相关（对/错）？', options: [{ id: 'T', text: 'True' }, { id: 'F', text: 'False' }], answer: ['T'] },
-      { id: 'q_single', type: 'single', content: '本文主题最贴近以下哪项？', options: [{ id: 'A', text: '前端/框架' }, { id: 'B', text: '后端/数据库' }, { id: 'C', text: '操作系统' }, { id: 'D', text: '计算机网络' }], answer: ['A'] },
-      { id: 'q_multi', type: 'multiple', content: '文中可能涉及的实践包括哪些？', options: [{ id: 'A', text: '编写测试' }, { id: 'B', text: '性能优化' }, { id: 'C', text: '注释完善' }, { id: 'D', text: '随机猜测' }], answer: ['A', 'B'] },
-    ];
-    return NextResponse.json({ title: safeTitle, questions: questions.length ? questions : fallback });
+    
+    // 确保至少有10道题目
+    if (questions.length < 10) {
+      console.log(`[generate-from-url/preview] Only generated ${questions.length} questions, need at least 10`);
+    }
+    
+    // 如果AI生成失败或数量不足，返回占位题目提示（这不应该发生）
+    if (questions.length === 0) {
+      return NextResponse.json({ 
+        error: 'AI题目生成失败，请检查内容是否包含足够的信息', 
+        title: safeTitle, 
+        questions: [] 
+      }, { status: 422 });
+    }
+    
+    return NextResponse.json({ title: safeTitle, questions });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Internal Error' }, { status: 500 });
   }

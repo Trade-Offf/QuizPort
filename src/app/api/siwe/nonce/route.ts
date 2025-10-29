@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { d1Run } from '@/lib/cf';
+import { dbExecute } from '@/lib/db';
 
 function randomNonce(length = 16): string {
   const bytes = Array.from(crypto.getRandomValues(new Uint8Array(length)));
@@ -7,17 +7,27 @@ function randomNonce(length = 16): string {
 }
 
 export async function POST() {
-  const value = randomNonce(16);
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-  await d1Run(
-    'INSERT INTO siwe_nonces (id, value, expires_at, created_at) VALUES (?, ?, ?, ?)',
-    crypto.randomUUID(),
-    value,
-    expiresAt.toISOString(),
-    new Date().toISOString(),
-  );
-  return NextResponse.json({ nonce: value });
+  try {
+    console.log('[siwe/nonce] Creating nonce...');
+    const value = randomNonce(16);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const id = crypto.randomUUID();
+    console.log('[siwe/nonce] Nonce value:', value);
+    console.log('[siwe/nonce] Nonce id:', id);
+    await dbExecute(
+      'INSERT INTO siwe_nonces (id, value, "expiresAt", "createdAt") VALUES (?, ?, ?::timestamp, ?::timestamp)',
+      id,
+      value,
+      expiresAt.toISOString(),
+      new Date().toISOString(),
+    );
+    console.log('[siwe/nonce] Nonce created successfully');
+    return NextResponse.json({ nonce: value });
+  } catch (error) {
+    console.error('[siwe/nonce] Error:', error);
+    return NextResponse.json({ error: 'Failed to create nonce' }, { status: 500 });
+  }
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 

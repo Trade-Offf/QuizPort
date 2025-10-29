@@ -1,14 +1,14 @@
 import { okJson } from '@/lib/http';
-import { d1All } from '@/lib/cf';
+import { dbQuery } from '@/lib/db';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const page = Math.max(Number(url.searchParams.get('page') || '1'), 1);
   const pageSize = Math.min(Math.max(Number(url.searchParams.get('pageSize') || '20'), 1), 50);
-  const totalRow = await d1All<{ cnt: number }>('SELECT COUNT(*) as cnt FROM quiz_sets WHERE status = ?', 'public');
-  const total = totalRow[0]?.cnt ?? 0;
-  const items = await d1All(
-    'SELECT slug, title, description, created_at as createdAt FROM quiz_sets WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+  const totalRow = await dbQuery<{ cnt: string }>('SELECT COUNT(*)::int as cnt FROM quiz_sets WHERE status = ?::"QuizSetStatus"', 'public');
+  const total = Number(totalRow[0]?.cnt ?? 0);
+  const items = await dbQuery(
+    'SELECT slug, title, description, "createdAt" FROM quiz_sets WHERE status = ?::"QuizSetStatus" ORDER BY "createdAt" DESC LIMIT ? OFFSET ?',
     'public',
     pageSize,
     (page - 1) * pageSize,
@@ -16,6 +16,6 @@ export async function GET(req: Request) {
   return okJson({ items, page, pageSize, total });
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 

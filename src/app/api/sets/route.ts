@@ -1,11 +1,11 @@
 import { okJson, parseJson, unauthorized, validate } from '@/lib/http';
 import { createSetSchema } from '@/lib/schemas';
 import { requireUser } from '@/lib/authz';
-import { d1All, d1Run } from '@/lib/cf';
+import { dbQuery, dbExecute } from '@/lib/db';
 
 export async function GET() {
-  const items = await d1All(
-    'SELECT slug, title, description, created_at as createdAt FROM quiz_sets WHERE status = ? ORDER BY created_at DESC',
+  const items = await dbQuery(
+    'SELECT slug, title, description, "createdAt" FROM quiz_sets WHERE status = ?::"QuizSetStatus" ORDER BY "createdAt" DESC',
     'public',
   );
   return okJson({ items });
@@ -17,8 +17,8 @@ export async function POST(req: Request) {
   const body = await parseJson(req);
   const data = validate(createSetSchema, body);
   const id = crypto.randomUUID();
-  await d1Run(
-    'INSERT INTO quiz_sets (id, slug, title, description, author_id, quiz_ids, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  await dbExecute(
+    'INSERT INTO quiz_sets (id, slug, title, description, "authorId", "quizIds", status, "createdAt") VALUES (?, ?, ?, ?, ?, ?, ?, ?::timestamp)',
     id,
     data.slug,
     data.title,

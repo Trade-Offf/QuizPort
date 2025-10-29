@@ -44,7 +44,7 @@ export default function UploadPage() {
     excerpt: string;
     full?: string;
   } | null>(null);
-  const canCreate = selected.size >= 5;
+  const canCreate = selected.size >= 10;
 
   const extractArticle = async () => {
     if (!url.trim()) return;
@@ -136,6 +136,16 @@ export default function UploadPage() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          setToast({ message: '请先登录后再创建题目', tone: 'warning' });
+        } else {
+          setToast({ message: data?.error || '创建失败，请稍后重试', tone: 'danger' });
+        }
+        return;
+      }
+      
       const slug: string | undefined = data?.set?.slug;
       if (slug) {
         await fetch(`/api/sets/${slug}/publish`, { method: 'POST' });
@@ -243,7 +253,7 @@ export default function UploadPage() {
               <div>
                 <div className="text-lg font-medium">{title || '预览'}</div>
                 <div className="text-sm text-gray-600">
-                  已选 {selected.size} / {questions.length}（需 ≥ 5）
+                  已选 {selected.size} / {questions.length}（需 ≥ 10）
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -272,7 +282,7 @@ export default function UploadPage() {
                 >
                   {submitting ? '创建中…' : '创建'}
                 </Button>
-                <div className="text-xs text-gray-500">至少选择 5 题即可创建</div>
+                <div className="text-xs text-gray-500">至少选择 10 题即可创建</div>
               </div>
             </div>
 
@@ -281,7 +291,7 @@ export default function UploadPage() {
                 aria-label="选题进度"
                 size="sm"
                 radius="lg"
-                value={Math.min(selected.size, 5) * 20}
+                value={Math.min(selected.size, 10) * 10}
                 color="success"
                 className="max-w-md"
               />

@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  moderator
+  admin
+}
+
+enum QuizType {
+  single_choice
+  multi_choice
+  true_false
+  short_answer
+}
+
+enum QuizStatus {
+  draft
+  pending
+  approved
+  rejected
+}
+
+enum QuizSetStatus {
+  draft
+  private
+  public
+}
+
+enum ReportTargetType {
+  quiz
+  quizSet
+  user
+}
+
+enum ReportStatus {
+  open
+  reviewing
+  resolved
+  dismissed
+}
+
+enum PointsLogType {
+  submit_set
+  correct_answer
+  quiz_approved
+  daily_bonus
+  admin_adjust
+}
+
+model User {
+  id            String    @id @default(uuid())
+  walletAddress String?   @unique
+  email         String?   @unique
+  username      String    @unique
+  avatarUrl     String?
+  role          Role      @default(user)
+  points        Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  quizzes        Quiz[]
+  quizSets       QuizSet[]
+  submissions    Submission[]
+  quizAttempts   QuizAttempt[]
+  reports        Report[]
+  pointsLogs     PointsLog[]
+
+  @@map("users")
+}
+
+model Quiz {
+  id          String     @id @default(uuid())
+  authorId    String     
+  title       String
+  type        QuizType
+  content     Json
+  answer      Json
+  explanation String?
+  tags        String[]
+  status      QuizStatus @default(pending)
+  popularity  Int        @default(0)
+  createdAt   DateTime   @default(now()) 
+  updatedAt   DateTime   @updatedAt 
+
+  author        User           @relation(fields: [authorId], references: [id])
+  quizAttempts  QuizAttempt[]
+  quizSets      QuizSet[]
+
+  @@map("quizzes")
+}
+
+model QuizSet {
+  id          String         @id @default(uuid())
+  slug        String         @unique
+  title       String
+  description String?
+  authorId    String         
+  quizIds     String[]       
+  status      QuizSetStatus  @default(draft)
+  createdAt   DateTime       @default(now()) 
+  updatedAt   DateTime       @updatedAt 
+
+  author       User         @relation(fields: [authorId], references: [id])
+  submissions  Submission[]
+  quizzes      Quiz[]
+
+  @@index([slug])
+  @@map("quiz_sets")
+}
+
+model Submission {
+  id          String   @id @default(uuid())
+  userId      String   
+  quizSetId   String   
+  answers     Json
+  score       Int
+  correctCount Int      
+  durationSec Int      
+  createdAt   DateTime @default(now()) 
+
+  user    User     @relation(fields: [userId], references: [id])
+  quizSet QuizSet  @relation(fields: [quizSetId], references: [id])
+
+  @@index([userId])
+  @@index([quizSetId])
+  @@map("submissions")
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid())
+  userId      String   
+  quizId      String   
+  userAnswer  Json     
+  isCorrect   Boolean  
+  createdAt   DateTime @default(now()) 
+
+  user User @relation(fields: [userId], references: [id])
+  quiz Quiz @relation(fields: [quizId], references: [id])
+
+  @@map("quiz_attempts")
+}
+
+model Report {
+  id         String          @id @default(uuid())
+  reporterId String          
+  targetType ReportTargetType 
+  targetId   String          
+  reason     String
+  status     ReportStatus    @default(open)
+  createdAt  DateTime        @default(now()) 
+  updatedAt  DateTime        @updatedAt 
+
+  reporter User @relation(fields: [reporterId], references: [id])
+
+  @@map("reports")
+}
+
+model PointsLog {
+  id        String        @id @default(uuid())
+  userId    String        
+  type      PointsLogType
+  amount    Int
+  refId     String?       
+  createdAt DateTime      @default(now()) 
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("points_logs")
+}
+
+model SiweNonce {
+  id        String   @id @default(uuid())
+  value     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("siwe_nonces")
+}
+
