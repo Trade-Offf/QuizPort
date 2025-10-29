@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --watch",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cf:build": "NPM_CONFIG_CACHE=.npm-cache TAILWIND_DISABLE_LIGHTNINGCSS=1 NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 LIGHTNINGCSS_WASM=1 next build && npx @cloudflare/next-on-pages",
+    "build:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --minify",
+    "cf:build": "NPM_CONFIG_CACHE=.npm-cache NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 npm run build:css && next build && npx @cloudflare/next-on-pages",
     "cf:dev": "npx wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "cf:deploy": "npx wrangler pages deploy .vercel/output/static --branch=main"
   },
@@ -21,9 +23,10 @@
     "@wagmi/core": "^2.11.7",
     "ethers": "^6.15.0",
     "framer-motion": "^12.23.24",
+    "lightningcss": "^1.28.0",
     "next": "15.1.4",
     "next-auth": "^4.24.7",
-    "lightningcss": "^1.28.0",
+    "nodemailer": "^7.0.10",
     "prisma": "^6.18.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -36,22 +39,21 @@
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.4",
-    "@tailwindcss/postcss": "^4.1.15",
+    "@tailwindcss/cli": "^4.1.16",
     "@types/node": "^20.16.5",
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
-    "lightningcss-wasm": "^1.28.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
     "eslint-config-next": "15.1.4",
+    "lightningcss-wasm": "^1.28.0",
     "playwright": "^1.56.1",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.15",
+    "tailwindcss": "^4.1.16",
     "tsx": "^4.19.1",
     "typescript": "^5.5.4",
     "wrangler": "^3.76.0"
-  }
-  ,
+  },
   "overrides": {
     "lightningcss": "^1.28.0"
   }
