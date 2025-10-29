@@ -25,5 +25,5 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   return okJson({ quiz: { ...quiz, status: 'approved' } });
 }
 
-export const runtime = 'nodejs';
+ 
 

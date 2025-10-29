@@ -16,6 +16,6 @@ export async function GET(req: Request) {
   return okJson({ items, page, pageSize, total });
 }
 
-export const runtime = 'nodejs';
+ 
 
 

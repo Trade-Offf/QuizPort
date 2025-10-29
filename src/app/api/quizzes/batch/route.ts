@@ -58,5 +58,5 @@ export async function POST(req: Request) {
   return okJson({ created: createdIds.length, quizIds: createdIds });
 }
 
-export const runtime = 'nodejs';
+ 
 

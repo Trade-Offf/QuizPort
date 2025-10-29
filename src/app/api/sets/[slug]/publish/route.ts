@@ -13,5 +13,5 @@ export async function POST(_req: Request, ctx: { params: Promise<{ slug: string 
   return okJson({ set: { ...set, status: 'public' } });
 }
 
-export const runtime = 'nodejs';
+ 
 

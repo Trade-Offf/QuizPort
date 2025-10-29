@@ -16,6 +16,6 @@ export async function GET(req: Request) {
   return okJson({ items });
 }
 
-export const runtime = 'nodejs';
+ 
 
 

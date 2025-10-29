@@ -25,5 +25,5 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   return okJson({ report: { id, reporterId: user.id, targetType: 'quiz', targetId: quiz.id, reason: data.reason, status: 'open' } });
 }
 
-export const runtime = 'nodejs';
+ 
 

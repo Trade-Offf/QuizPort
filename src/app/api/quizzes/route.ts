@@ -64,5 +64,5 @@ export async function POST(req: Request) {
   return okJson({ quiz: created });
 }
 
-export const runtime = 'nodejs';
+ 
 

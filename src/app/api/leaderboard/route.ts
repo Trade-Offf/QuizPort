@@ -14,5 +14,5 @@ export async function GET(req: Request) {
   return okJson({ range, users });
 }
 
-export const runtime = 'nodejs';
+ 
 

@@ -20,5 +20,5 @@ export async function PATCH(req: Request) {
   return okJson({ user: updated });
 }
 
-export const runtime = 'nodejs';
+ 
 

@@ -35,5 +35,5 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return okJson({ quiz: updated });
 }
 
-export const runtime = 'nodejs';
+ 
 
