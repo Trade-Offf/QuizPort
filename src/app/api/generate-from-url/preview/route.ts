@@ -121,11 +121,42 @@ ${text.slice(0, 16000)}
   }
 }
 
+function cleanStem(raw: string, maxLen = 120): string {
+  try {
+    let s = String(raw || '');
+    // 移除 Markdown 图片与链接
+    s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
+    s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+    // 移除裸露 URL
+    s = s.replace(/https?:\/\/\S+/g, '');
+    // 移除常见头部元信息行
+    s = s.replace(/^\s*(Title:|URL Source:|Published Time:|Markdown Content:).*$\n?/gim, '');
+    s = s.replace(/^\s*Image\s*\d+:[^\n]*\n?/gim, '');
+    // 去除多余符号与编号
+    s = s.replace(/^\s*\d+\s*[\.|、]\s*/g, '');
+    s = s.replace(/\(\s*\)/g, '');
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.length <= maxLen) return s;
+    // 优先在句号/问号/顿号/逗号处截断
+    const cut = s.slice(0, maxLen + 1);
+    const idx = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('？'), cut.lastIndexOf('！'), cut.lastIndexOf('，'), cut.lastIndexOf('.'));
+    return (idx > 30 ? cut.slice(0, idx + 1) : s.slice(0, maxLen)).trim();
+  } catch {
+    return String(raw || '').slice(0, maxLen);
+  }
+}
+
+function cleanOption(raw: string, maxLen = 60): string {
+  const s = cleanStem(raw, maxLen);
+  return s || '选项';
+}
+
 function fallbackQuestions(text: string, fallbackTitle: string) {
   const sentences = (text || '')
     .replace(/\s+/g, ' ')
     .split(/(?<=[。！？.!?])\s+/)
-    .filter((s) => s && s.length >= 12)
+    .map((s) => cleanStem(s))
+    .filter((s) => s && s.length >= 8)
     .slice(0, 20);
   const qs = sentences.slice(0, 12).map((s, i) => ({
     id: `fb_${i + 1}`,
@@ -153,13 +184,14 @@ function normalize(raw: any, fallbackTitle: string) {
     let options = Array.isArray(q?.options) ? q.options : [];
     if (type === 'boolean') options = [{ id: 'T', text: 'True' }, { id: 'F', text: 'False' }];
     if (!options?.length || options.length < 2) options = [{ id: 'A', text: '选项A' }, { id: 'B', text: '选项B' }];
+    options = options.map((op: any, i: number) => ({ id: String(op?.id || String.fromCharCode(65 + i)), text: cleanOption(String(op?.text || '选项')) })).slice(0, 6);
     let answer: string[] = Array.isArray(q?.answer) ? q.answer.map(String) : [];
     const optionIds = new Set(options.map((o: any) => String(o.id)));
     answer = answer.filter((a) => optionIds.has(String(a)));
     if (type === 'single') { if (answer.length !== 1) answer = [options[0].id]; }
     else if (type === 'multiple') { if (answer.length < 2) answer = options.slice(0, 2).map((o: any) => o.id); }
     else { if (answer.length !== 1 || (answer[0] !== 'T' && answer[0] !== 'F')) answer = ['T']; }
-    const content = String(q?.content || fallbackTitle || `根据文章出题 ${idx + 1}`);
+    const content = cleanStem(String(q?.content || fallbackTitle || `根据文章出题 ${idx + 1}`));
     const difficulty = ['easy','medium','hard'].includes(q?.difficulty) ? q.difficulty : 'easy';
     const tags = Array.isArray(q?.tags) ? q.tags.slice(0, 3) : [];
     return [{ id: q?.id || `q_${idx + 1}`, type, content, options, answer, explanation: q?.explanation || '', difficulty, tags }];

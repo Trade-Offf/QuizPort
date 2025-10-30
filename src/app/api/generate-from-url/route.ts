@@ -122,6 +122,31 @@ function stripCodeFences(s: string) {
   return s.replace(/```json[\s\S]*?\n|```/g, '').trim();
 }
 
+function cleanStem(raw: string, maxLen = 120): string {
+  try {
+    let s = String(raw || '');
+    s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
+    s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+    s = s.replace(/https?:\/\/\S+/g, '');
+    s = s.replace(/^\s*(Title:|URL Source:|Published Time:|Markdown Content:).*$\n?/gim, '');
+    s = s.replace(/^\s*Image\s*\d+:[^\n]*\n?/gim, '');
+    s = s.replace(/^\s*\d+\s*[\.|、]\s*/g, '');
+    s = s.replace(/\(\s*\)/g, '');
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.length <= maxLen) return s;
+    const cut = s.slice(0, maxLen + 1);
+    const idx = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('？'), cut.lastIndexOf('！'), cut.lastIndexOf('，'), cut.lastIndexOf('.'));
+    return (idx > 30 ? cut.slice(0, idx + 1) : s.slice(0, maxLen)).trim();
+  } catch {
+    return String(raw || '').slice(0, maxLen);
+  }
+}
+
+function cleanOption(raw: string, maxLen = 60): string {
+  const s = cleanStem(raw, maxLen);
+  return s || '选项';
+}
+
 async function generateWithAI(text: string, title: string) {
   // 优先 DeepSeek；无则尝试 OpenAI；都没有返回 null
   const sys = '你是资深出题官。输出严格的 JSON，不要任何多余文字。';
@@ -234,6 +259,7 @@ export async function POST(req: Request) {
             { id: 'B', text: '选项B' },
           ];
         }
+        options = options.map((op: any, i: number) => ({ id: String(op?.id || String.fromCharCode(65 + i)), text: cleanOption(String(op?.text || '选项')) })).slice(0, 6);
         let answer: string[] = Array.isArray(q?.answer) ? q.answer.map(String) : [];
         const optionIds = new Set(options.map((o: any) => String(o.id)));
         answer = answer.filter((a) => optionIds.has(String(a)));
@@ -244,7 +270,7 @@ export async function POST(req: Request) {
         } else {
           if (answer.length !== 1 || (answer[0] !== 'T' && answer[0] !== 'F')) answer = ['T'];
         }
-        const content = String(q?.content || resolvedTitle || `根据文章出题 ${idx + 1}`);
+        const content = cleanStem(String(q?.content || resolvedTitle || `根据文章出题 ${idx + 1}`));
         return [
           {
             id: q?.id || `q_${idx + 1}`,
@@ -277,9 +303,9 @@ export async function POST(req: Request) {
         'INSERT INTO quizzes (id, authorId, title, type, content, answer, explanation, tags, status, popularity, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         id,
         user.id,
-        q.content.slice(0, 60),
+        cleanStem(q.content, 60),
         mappedType,
-        JSON.stringify({ stem: q.content, options: q.options }),
+        JSON.stringify({ stem: cleanStem(q.content, 160), options: (q.options || []).map((op: any, i: number) => ({ id: String(op?.id || String.fromCharCode(65 + i)), text: cleanOption(String(op?.text || '选项')) })).slice(0, 6) }),
         JSON.stringify(
           mappedType === 'true_false'
             ? q.answer[0] === 'T'
