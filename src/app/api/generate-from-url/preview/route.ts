@@ -68,36 +68,39 @@ async function generateWithDeepSeek(text: string, title: string) {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) return null;
   
-  const system = `你是一位专业的题目生成专家。请仔细阅读文章内容，基于文章中的具体知识点、概念、细节来生成高质量的练习题。
+  const system = `你是资深面试官与教学设计师。
+目标：从一篇技术文章中抽取“可考的知识点”，据此设计有价值的深层练习题，贴近真实面试/实战场景。
 
-要求：
-1. 必须生成10-15道题目，题目内容必须紧密围绕文章中的知识点
-2. 题目要具体，不能泛泛而谈，要基于文章中的实际内容
-3. 每道题目的题干和选项都必须有明确的依据来自文章
-4. 题型混合：single（单选）、multiple（多选）、boolean（判断）
-5. 难度分布：easy 60%、medium 30%、hard 10%
-6. 语言：简体中文
-7. 只输出严格 JSON，不要任何多余文字、解释、代码块标记或 Markdown
+流程（仅在脑内完成，不要输出过程）：
+1) 解析文章，归纳8-15个“原子知识点”（概念、原理、度量/阈值、步骤、权衡、最佳实践、常见坑等）。
+2) 基于这些知识点，设计10-15道题；题干不要拷贝原文句子，要用自己的话抽象与迁移；干净、具体、可判定。
+3) 设计高质量干扰项：常见误解/边界条件/反例；避免“以上皆是/以上都不是”。
 
-输出格式：
-{"version":"1.0","title":"${title}","questions":[{"id":"q1","type":"single|multiple|boolean","content":"...","options":[{"id":"A","text":"..."}],"answer":["A"],"explanation":"简短解析（说明答案原因）","difficulty":"easy|medium|hard","tags":["相关标签"]}]}
+出题规范：
+- 题型混合：single（单选）、multiple（多选）、boolean（判断）
+- 难度分布：easy 60%、medium 30%、hard 10%
+- 语言：简体中文；题干≤120字，选项≤60字；避免口语与无意义赘词
+- boolean 选项固定：T/True、F/False；single 4个选项；multiple 4-6个选项
+- 每题 explanation（8-40字）：指出知识点与关键理由/条件
+- tags：给出1-3个主题标签（如“性能指标”、“SSR”、“缓存策略”）
 
-约束：
-- boolean题使用 options=[{"id":"T","text":"True"},{"id":"F","text":"False"}]，answer为["T"]或["F"]
-- single题：恰1个答案
-- multiple题：至少2个答案
-- explanation必须简短明确（8-30字）
-- 禁止生成无关内容
-- 禁止使用Markdown格式`;
+输出：仅输出严格 JSON（不要 Markdown/代码块/多余文字）。`;
 
-  const user = `请基于以下文章内容，生成10-15道高质量的练习题。题目必须严格基于文章中的知识点、概念、步骤、方法等具体内容，不能使用通用的占位问题。
+  const user = `请基于下文生成10-15道高质量题目。题目应围绕作者想表达的“知识点本身”，而非机械摘抄句子；更偏面试可考查的思维与能力。
 
 文章标题：${title}
 
 文章内容：
 ${text.slice(0, 16000)}
 
-请生成10-15道基于文章实际内容的题目，确保每道题都有明确的文章依据。`;
+请严格按以下 JSON 输出：
+{"version":"1.0","title":"${title}","questions":[{"id":"q1","type":"single|multiple|boolean","content":"...","options":[{"id":"A","text":"..."}],"answer":["A"],"explanation":"...","difficulty":"easy|medium|hard","tags":["..."]}]}
+
+附加要求：
+- boolean 的 options 固定为 [{"id":"T","text":"True"},{"id":"F","text":"False"}]，answer 为 ["T"] 或 ["F"]
+- single 仅1个正确答案；multiple 至少2个正确答案
+- 不要生成“以上皆是/都不是”等低质量选项
+- 不要输出除 JSON 以外的任何内容。`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
   

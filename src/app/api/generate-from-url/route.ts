@@ -149,10 +149,10 @@ function cleanOption(raw: string, maxLen = 60): string {
 
 async function generateWithAI(text: string, title: string) {
   // 优先 DeepSeek；无则尝试 OpenAI；都没有返回 null
-  const sys = '你是资深出题官。输出严格的 JSON，不要任何多余文字。';
-  const user = `根据以下文章内容，为读者生成3道练习题（single/multiple/boolean），要求：
-1) 每题包含 content(题干)、options(A-D/T-F)、answer(严格匹配)、explanation(8-30字中文简短解析)
-2) 仅输出严格 JSON：{"version":"1.0","title":"${title}","questions":[{"id":"q1","type":"single|multiple|boolean","content":"...","options":[{"id":"A","text":"..."}],"answer":["A"],"explanation":"..."}]}
+  const sys = '你是资深面试官与教学设计师，仅输出严格 JSON。';
+  const user = `从文章中抽取核心知识点并设计3道高质量题（single/multiple/boolean）。题干不要抄原文，需能考察理解/应用/对比/权衡；每题给高质量干扰项。
+字段：content（≤120字）、options（single 4项；multiple 4-6项；boolean T/F）、answer、explanation（8-40字给出理由/条件）。
+仅输出：{"version":"1.0","title":"${title}","questions":[{"id":"q1","type":"single|multiple|boolean","content":"...","options":[{"id":"A","text":"..."}],"answer":["A"],"explanation":"..."}]}。
 文章片段：\n${text.slice(0, 6000)}`;
 
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
