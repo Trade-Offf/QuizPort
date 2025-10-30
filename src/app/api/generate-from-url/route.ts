@@ -30,6 +30,17 @@ async function fetchArticle(
   }
   // Juejin 等站点可能需要渲染，尝试通过 r.jina.ai 代理读取纯文本
   if (!html) {
+    try {
+      const proxyUrl = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
+      const res = await fetch(proxyUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const text = await res.text();
+        const titleLine = text.split('\n').find((l) => /^#\s+/.test(l));
+        const t = titleLine ? titleLine.replace(/^#\s+/, '').trim() : '未命名文章';
+        const ok = text.trim().length > 150;
+        return { title: t, author: undefined, content: ok ? text.slice(0, 20000) : '', ok };
+      }
+    } catch {}
     return { title: '未命名文章', author: undefined, content: '', ok: false };
   }
   const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
@@ -49,6 +60,16 @@ async function fetchArticle(
     .trim();
   // 如果疑似反爬，占位或正文过短，尝试用 r.jina.ai 抓取可读文本
   if (text.toLowerCase().includes('please wait') || text.length < 400) {
+    try {
+      const proxyUrl = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
+      const res = await fetch(proxyUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const jr = await res.text();
+        if (jr.trim().length > 150) {
+          return { title, author: authorMeta?.trim(), content: jr.slice(0, 20000), ok: true };
+        }
+      }
+    } catch {}
     return { title, author: authorMeta?.trim(), content: '', ok: false };
   }
   return { title, author: authorMeta?.trim(), content: text.slice(0, 20000), ok: true };
@@ -167,10 +188,10 @@ export async function POST(req: Request) {
   try {
     const user = await requireUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // 临时移除白名单限制用于测试
-    // if (!isAddressWhitelisted(user.walletAddress)) {
-    //   return NextResponse.json({ error: 'Forbidden: Not whitelisted' }, { status: 403 });
-    // }
+    // 仅白名单地址允许生成
+    if (!isAddressWhitelisted(user.walletAddress)) {
+      return NextResponse.json({ error: 'Forbidden: Not whitelisted' }, { status: 403 });
+    }
     const body = await req.json();
     const url = body?.url as string | undefined;
     if (!url || typeof url !== 'string')
