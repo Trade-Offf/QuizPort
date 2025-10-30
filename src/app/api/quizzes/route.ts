@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     JSON.stringify(data.answer ?? null),
     data.explanation ?? null,
     JSON.stringify(data.tags ?? []),
-    'pending',
+    'approved',
     0,
     new Date().toISOString(),
   );

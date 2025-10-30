@@ -44,21 +44,38 @@ export function hasRole(user: { role: string } | null | undefined, roles: Array<
   return roles.includes(user.role as any);
 }
 
+function normalizeAddressLoose(value?: string | null): string | null {
+  if (!value) return null;
+  try {
+    let s = String(value).trim();
+    // 可选去掉 0x/0X 前缀
+    s = s.replace(/^0x/i, '');
+    // 仅保留字母与数字
+    s = s.replace(/[^0-9a-zA-Z]/g, '');
+    if (!s) return null;
+    // 统一到大写进行无大小写比较
+    return s.toUpperCase();
+  } catch {
+    return null;
+  }
+}
+
 export function isAddressWhitelisted(address?: string | null): boolean {
-  if (!address) {
-    console.log('[isAddressWhitelisted] No address provided');
+  const target = normalizeAddressLoose(address);
+  if (!target) {
+    console.log('[isAddressWhitelisted] No valid address');
     return false;
   }
   const env = process.env.WHITELIST_ADDRESSES || '';
   const list = env
     .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  
-  console.log('[isAddressWhitelisted] Address:', address.toLowerCase());
-  console.log('[isAddressWhitelisted] Whitelist:', list);
-  console.log('[isAddressWhitelisted] Is whitelisted:', list.includes(address.toLowerCase()));
-  
-  return list.includes(address.toLowerCase());
+    .map((s) => normalizeAddressLoose(s))
+    .filter((v): v is string => !!v);
+
+  const hit = list.includes(target);
+  console.log('[isAddressWhitelisted] Addr(normalized):', target);
+  console.log('[isAddressWhitelisted] List(normalized):', list);
+  console.log('[isAddressWhitelisted] Hit:', hit);
+  return hit;
 }
 

@@ -18,7 +18,7 @@ export default function NewSetPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/quizzes?status=approved&page=1&pageSize=100');
+        const res = await fetch('/api/quizzes?page=1&pageSize=100');
         const data = await res.json();
         setQuizzes(data.items ?? []);
       } finally {
@@ -88,7 +88,7 @@ export default function NewSetPage() {
           </div>
 
           <div>
-            <div className="mb-2 text-sm text-gray-600">选择题目（已审核）</div>
+            <div className="mb-2 text-sm text-gray-600">选择题目</div>
             <div className="max-h-[60vh] overflow-auto rounded border">
               {loading ? (
                 <div className="p-3 text-sm text-gray-500">加载中…</div>

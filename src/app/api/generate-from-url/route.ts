@@ -315,7 +315,7 @@ export async function POST(req: Request) {
         ),
         q.explanation ?? null,
         JSON.stringify(['auto', 'from-url']),
-        'pending',
+        'approved',
         0,
         new Date().toISOString(),
       );
