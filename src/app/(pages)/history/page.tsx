@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Card, CardBody, Spinner, Chip, Button, Modal, ModalContent, ModalHeader, ModalBody, Tabs, Tab, Input } from '@heroui/react';
 import { LinkButton } from '@/components/ui/LinkButton';
 
-type Item = { slug: string; title: string; description?: string; createdAt: string };
+type Item = { slug: string; title: string; description?: string; authorId?: string; createdAt: string };
 
 export default function HistoryPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -12,6 +12,8 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [total, setTotal] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -30,7 +32,20 @@ export default function HistoryPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(1); }, []);
+  useEffect(() => { 
+    load(1);
+    // 检查是否为管理员，仅用于显示删除操作
+    (async () => {
+      try {
+        const res = await fetch('/api/me', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          setIsAdmin(!!data?.user?.isAdmin);
+          setUserId(data?.user?.id || null);
+        }
+      } catch {}
+    })();
+  }, []);
 
   const openShare = async (slug: string, title: string, description?: string) => {
     setShareOpen(true);
@@ -104,6 +119,24 @@ export default function HistoryPage() {
                       <Button variant="flat" radius="lg" className="bg-white/10 text-white" onPress={() => openShare(it.slug, it.title, it.description)}>
                         分享
                       </Button>
+                      {(isAdmin || (userId && it.authorId && userId === it.authorId)) && (
+                        <Button
+                          variant="flat"
+                          radius="lg"
+                          className="bg-red-600 text-white"
+                          onPress={async () => {
+                            if (!confirm('确认删除该题库？此操作不可撤销')) return;
+                            const res = await fetch(`/api/sets/${it.slug}`, { method: 'DELETE' });
+                            if (res.ok) {
+                              await load(page);
+                            } else {
+                              try { const d = await res.json(); alert(d?.error || '删除失败'); } catch { alert('删除失败'); }
+                            }
+                          }}
+                        >
+                          删除
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardBody>

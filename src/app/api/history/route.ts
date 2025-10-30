@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   const totalRow = await dbQuery<{ cnt: string }>('SELECT COUNT(*)::int as cnt FROM quiz_sets WHERE status = ?::"QuizSetStatus"', 'public');
   const total = Number(totalRow[0]?.cnt ?? 0);
   const items = await dbQuery(
-    'SELECT slug, title, description, "createdAt" FROM quiz_sets WHERE status = ?::"QuizSetStatus" ORDER BY "createdAt" DESC LIMIT ? OFFSET ?',
+    'SELECT slug, title, description, "authorId", "createdAt" FROM quiz_sets WHERE status = ?::"QuizSetStatus" ORDER BY "createdAt" DESC LIMIT ? OFFSET ?',
     'public',
     pageSize,
     (page - 1) * pageSize,

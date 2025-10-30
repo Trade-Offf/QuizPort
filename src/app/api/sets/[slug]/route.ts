@@ -1,5 +1,6 @@
-import { notFound, okJson } from '@/lib/http';
-import { dbQueryOne, dbQuery } from '@/lib/db';
+import { forbidden, notFound, okJson, unauthorized } from '@/lib/http';
+import { dbQueryOne, dbQuery, dbExecute } from '@/lib/db';
+import { requireUser, isAddressAdmin } from '@/lib/authz';
 
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params;
@@ -26,5 +27,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   return okJson({ set, quizzes });
 }
 
- 
+export async function DELETE(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
+  const { slug } = await ctx.params;
+  const user = await requireUser();
+  if (!user) return unauthorized();
+  const set = await dbQueryOne<any>('SELECT id, "authorId" FROM quiz_sets WHERE slug = ?', slug);
+  if (!set) return notFound('Set not found');
+  const isOwner = set.authorId === user.id;
+  const isAdmin = isAddressAdmin(user.walletAddress);
+  if (!isOwner && !isAdmin) return forbidden('Not allowed');
+  await dbExecute('DELETE FROM quiz_sets WHERE id = ?', set.id);
+  return okJson({ ok: true });
+}
 

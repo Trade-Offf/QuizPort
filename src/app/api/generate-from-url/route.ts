@@ -9,6 +9,10 @@ async function sha1Hex(input: string): Promise<string> {
 }
 import { dbQueryOne, dbExecute } from '@/lib/db';
 
+function toPgTextArray(values: string[]): string {
+  return '{' + values.map(v => '"' + String(v).replace(/"/g, '\\"') + '"').join(',') + '}';
+}
+
 async function fetchArticle(
   url: string
 ): Promise<{ title: string; author?: string; content: string; ok: boolean }> {
@@ -221,6 +225,12 @@ export async function POST(req: Request) {
     const url = body?.url as string | undefined;
     if (!url || typeof url !== 'string')
       return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
+    // 先计算 slug 并检查是否已存在；若存在，直接返回，不继续插入题目
+    const slug = 'u-' + (await sha1Hex(url)).slice(0, 10);
+    const existingSet = await dbQueryOne<any>('SELECT * FROM quiz_sets WHERE slug = ?', slug);
+    if (existingSet) {
+      return NextResponse.json({ exists: true, set: existingSet }, { status: 409 });
+    }
     const hasProvided = Array.isArray(body?.selectedQuestions) && body.selectedQuestions.length > 0;
 
     const article = await fetchArticle(url);
@@ -322,19 +332,8 @@ export async function POST(req: Request) {
       createdIds.push(id);
     }
 
-    // 为该 URL 生成/复用题单（D1）
-    const slug = 'u-' + (await sha1Hex(url)).slice(0, 10);
-    const exists = await dbQueryOne<any>('SELECT id FROM quiz_sets WHERE slug = ?', slug);
-    if (exists) {
-      await dbExecute(
-        'UPDATE quiz_sets SET title = ?, description = ?, quizIds = ?, updatedAt = ? WHERE slug = ? ',
-        resolvedTitle,
-        `来源：${url}${resolvedAuthor ? `\n作者：${resolvedAuthor}` : ''}`,
-        JSON.stringify(createdIds),
-        new Date().toISOString(),
-        slug,
-      );
-    } else {
+    // 为该 URL 生成题单（首次）
+    {
       const setId = crypto.randomUUID();
       await dbExecute(
         'INSERT INTO quiz_sets (id, slug, title, description, authorId, quizIds, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',

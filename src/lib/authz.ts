@@ -79,3 +79,14 @@ export function isAddressWhitelisted(address?: string | null): boolean {
   return hit;
 }
 
+export function isAddressAdmin(address?: string | null): boolean {
+  const target = normalizeAddressLoose(address);
+  if (!target) return false;
+  const env = process.env.ADMIN_ADDRESSES || '';
+  const defaults = ['0x3D0f143b8Dfbd9aD3bEB719eDE3716FaDBf658D5'];
+  const list = (env ? env.split(',') : defaults)
+    .map((s) => normalizeAddressLoose(s))
+    .filter((v): v is string => !!v);
+  return list.includes(target);
+}
+

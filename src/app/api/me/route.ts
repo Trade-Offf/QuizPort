@@ -1,11 +1,11 @@
-import { requireUser } from '@/lib/authz';
+import { requireUser, isAddressAdmin } from '@/lib/authz';
 import { notFound, okJson, parseJson, unauthorized } from '@/lib/http';
 import { dbQueryOne, dbExecute } from '@/lib/db';
 
 export async function GET() {
   const user = await requireUser();
   if (!user) return unauthorized();
-  return okJson({ user });
+  return okJson({ user: { ...user, isAdmin: isAddressAdmin(user.walletAddress) } });
 }
 
 export async function PATCH(req: Request) {

@@ -10,6 +10,11 @@ import {
   Chip,
   Progress,
   Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from '@heroui/react';
 
 type Option = { id: string; text: string };
@@ -38,6 +43,7 @@ export default function UploadPage() {
     message: string;
     tone: 'success' | 'warning' | 'danger' | 'info';
   } | null>(null);
+  const [existsSlug, setExistsSlug] = useState<string | null>(null);
   const [debug, setDebug] = useState<{
     source: 'direct' | 'proxy' | 'fallback';
     matchedArticleRoot: boolean;
@@ -140,6 +146,14 @@ export default function UploadPage() {
       if (!res.ok) {
         if (res.status === 401) {
           setToast({ message: '请先登录后再创建题目', tone: 'warning' });
+        } else if (res.status === 409) {
+          const slug409: string | undefined = data?.set?.slug;
+          if (slug409) {
+            setExistsSlug(slug409);
+            setToast({ message: '该文章的题单已存在', tone: 'info' });
+          } else {
+            setToast({ message: '该文章题单已存在', tone: 'info' });
+          }
         } else {
           setToast({ message: data?.error || '创建失败，请稍后重试', tone: 'danger' });
         }
@@ -378,6 +392,20 @@ export default function UploadPage() {
           {toast.message}
         </div>
       )}
+      <Modal isOpen={!!existsSlug} onOpenChange={(open) => { if (!open) setExistsSlug(null); }} classNames={{ base: 'text-black' }}>
+        <ModalContent>
+          <ModalHeader className="text-base font-semibold">题单已存在</ModalHeader>
+          <ModalBody>
+            <div className="text-sm text-gray-700">该文章的题单已创建。你可以直接进入做题。</div>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setExistsSlug(null)}>我知道了</Button>
+            {existsSlug && (
+              <Button color="primary" onPress={() => { window.location.href = `/set/${existsSlug}`; }}>去做题</Button>
+            )}
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </main>
   );
 }
