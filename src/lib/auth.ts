@@ -17,7 +17,8 @@ export const authOptions: NextAuthOptions = {
         try {
           console.log('[SIWE authorize] Starting authorization...');
           const message = new SiweMessage(JSON.parse(credentials?.message || '{}'));
-          const domain = process.env.SIWE_DOMAIN || 'localhost';
+          const normalizeHost = (h: string) => h.replace(/^www\./, '');
+          const domain = normalizeHost(process.env.SIWE_DOMAIN || 'localhost');
           const nextAuthUrl = new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000');
           console.log('[SIWE authorize] Domain:', domain, 'Expected:', message.domain);
           console.log('[SIWE authorize] URI:', nextAuthUrl.origin, 'Expected:', message.uri);
@@ -29,7 +30,7 @@ export const authOptions: NextAuthOptions = {
             console.log('[SIWE authorize] Verification failed');
             return null;
           }
-          if (message.domain !== domain) {
+          if (normalizeHost(message.domain) !== domain) {
             console.log('[SIWE authorize] Domain mismatch');
             return null;
           }
@@ -38,7 +39,17 @@ export const authOptions: NextAuthOptions = {
           const expectedOrigin = nextAuthUrl.origin;
           const isDev = process.env.NODE_ENV === 'development';
           
-          if (actualOrigin !== expectedOrigin) {
+          const normalizeOrigin = (o: string) => {
+            try {
+              const u = new URL(o);
+              u.hostname = normalizeHost(u.hostname);
+              return u.origin;
+            } catch {
+              return o;
+            }
+          };
+
+          if (normalizeOrigin(actualOrigin) !== normalizeOrigin(expectedOrigin)) {
             // 检查是否只是端口不同（开发环境常见情况）
             const actualUrl = new URL(actualOrigin);
             const expectedUrl = new URL(expectedOrigin);

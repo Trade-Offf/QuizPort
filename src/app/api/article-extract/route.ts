@@ -141,8 +141,23 @@ async function extractWithHttp(url: string): Promise<ExtractResult> {
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    const ok = text.length > 200;
+    const ok = text.length > 150;
     return { title, author: null, content: text.slice(0, 20000), html: undefined, ok, debug: { matchedSelector: 'http-fallback', titleSelector: 'title', authorSelector: '' } };
+  } catch {
+    return { title: '未命名文章', content: '', ok: false };
+  }
+}
+
+// 兜底 2：Jina Reader 反爬代理（将网页转为可读文本）
+async function extractWithJina(url: string): Promise<ExtractResult> {
+  try {
+    const proxyUrl = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
+    const res = await fetch(proxyUrl, { cache: 'no-store' });
+    const text = await res.text();
+    const titleLine = text.split('\n').find((l) => /^#\s+/.test(l));
+    const title = titleLine ? titleLine.replace(/^#\s+/, '').trim() : (text.slice(0, 60) || '未命名文章');
+    const ok = text.trim().length > 150;
+    return { title, author: null, content: text.slice(0, 20000), ok, debug: { matchedSelector: 'jina-reader', titleSelector: '# heading', authorSelector: '' } } as any;
   } catch {
     return { title: '未命名文章', content: '', ok: false };
   }
@@ -154,7 +169,11 @@ export async function POST(req: Request) {
     if (!url || typeof url !== 'string') return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
     // 在 Vercel（无 Playwright）走 HTTP 兜底；本地优先用 Playwright
     const useHttpFallback = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-    const result = useHttpFallback ? await extractWithHttp(url) : await extractWithPlaywright(url);
+    let result = useHttpFallback ? await extractWithHttp(url) : await extractWithPlaywright(url);
+    if (!result.ok) {
+      // 再试一次：Jina Reader 代理
+      result = await extractWithJina(url);
+    }
     if (!result.ok) return NextResponse.json({ error: 'ContentExtractionFailed', title: result.title }, { status: 422 });
     return NextResponse.json(result);
   } catch (e: any) {
