@@ -5,13 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "dev:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --watch",
-    "build": "next build",
+    "build": "npm run build:css && next build",
     "start": "next start",
     "lint": "next lint",
-    "build:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --minify",
-    "cf:build": "NPM_CONFIG_CACHE=.npm-cache NEXT_DISABLE_LIGHTNINGCSS=1 LIGHTNINGCSS_FORCE_WASM=1 NEXT_OTEL_DISABLED=1 npx @cloudflare/next-on-pages",
-    "cf:dev": "npx wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
-    "cf:deploy": "npx wrangler pages deploy .vercel/output/static --branch=main"
+    "build:css": "tailwindcss -i ./src/app/globals.css -o ./src/app/tw.gen.css --minify"
   },
   "dependencies": {
     "@heroui/react": "^2.8.5",
@@ -38,8 +35,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.7",
-    "@opentelemetry/api": "^1.8.0",
     "@tailwindcss/cli": "^4.1.16",
     "@types/node": "^20.16.5",
     "@types/react": "18.3.5",
@@ -52,8 +47,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
     "tsx": "^4.19.1",
-    "typescript": "^5.5.4",
-    "wrangler": "^3.76.0"
+    "typescript": "^5.5.4"
   },
   "overrides": {
     "lightningcss": "^1.28.0"

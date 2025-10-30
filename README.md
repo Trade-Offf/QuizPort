@@ -76,6 +76,26 @@ SIWE 登录须知：
 
 ---
 
+## 部署到 Vercel（推荐）
+
+1. 创建数据库（推荐 Neon Postgres），拿到 `DATABASE_URL`。
+2. 在 Vercel 新建项目，导入本仓库。
+3. 在 Vercel 项目 Settings → Environment Variables 配置：
+
+```
+DATABASE_URL=你的生产库连接串
+NEXTAUTH_URL=https://你的域名
+NEXTAUTH_SECRET=强随机串
+SIWE_DOMAIN=你的域名（不带协议）
+NEXT_PUBLIC_SIWE_STATEMENT=Sign in to QuizPort
+```
+
+4. 构建：使用默认 `npm run build`（已内置 Tailwind 预编译）。
+5. 绑定自定义域名（可选），上线验证以下页面：`/`、`/upload`、`/history`、`/set/[slug]`。
+
+注意：不要为路由强制 `runtime = 'edge'`，保持 Node 运行时以兼容 next-auth/Prisma。
+
+
 ## 批量上传题目（JSON v1.0）
 
 接口：`POST /api/quizzes/batch`

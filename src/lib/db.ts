@@ -1,20 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { d1All, d1Get, d1Run } from './cf';
 
-// 检测当前运行环境
-function isCloudflare(): boolean {
-  try {
-    // 检查是否在 Cloudflare Workers/Pages 环境
-    return (
-      typeof (globalThis as any).__CF_PAGES !== 'undefined' ||
-      (typeof process !== 'undefined' && process.env.CF_PAGES === '1')
-    );
-  } catch {
-    return false;
-  }
-}
-
-// Prisma 客户端单例
+// Prisma 客户端单例（Vercel/本地使用 Postgres）
 let prisma: PrismaClient | null = null;
 
 function getPrismaClient(): PrismaClient {
@@ -26,42 +12,20 @@ function getPrismaClient(): PrismaClient {
   return prisma;
 }
 
-// 判断是否使用 D1
-function shouldUseD1(): boolean {
-  // 在 Cloudflare 环境使用 D1，本地开发使用 Prisma
-  return isCloudflare();
-}
-
-// 统一的数据查询接口
+// 统一的数据查询接口（仅 Prisma/Postgres）
 export async function dbQuery<T = any>(sql: string, ...binds: any[]): Promise<T[]> {
-  if (shouldUseD1()) {
-    const sanitized = sanitizeSqlForD1(sql);
-    return d1All<T>(sanitized, ...binds);
-  } else {
-    // 本地使用 Prisma，需要手动映射 SQL 到 Prisma
-    return queryWithPrisma<T>(sql, binds);
-  }
+  return queryWithPrisma<T>(sql, binds);
 }
 
 // 查询单条记录
 export async function dbQueryOne<T = any>(sql: string, ...binds: any[]): Promise<T | null> {
-  if (shouldUseD1()) {
-    const sanitized = sanitizeSqlForD1(sql);
-    return d1Get<T>(sanitized, ...binds);
-  } else {
-    const results = await queryWithPrisma<T>(sql, binds);
-    return results[0] ?? null;
-  }
+  const results = await queryWithPrisma<T>(sql, binds);
+  return results[0] ?? null;
 }
 
 // 执行 INSERT/UPDATE/DELETE
 export async function dbExecute(sql: string, ...binds: any[]): Promise<void> {
-  if (shouldUseD1()) {
-    const sanitized = sanitizeSqlForD1(sql);
-    return d1Run(sanitized, ...binds);
-  } else {
-    return executeWithPrisma(sql, binds);
-  }
+  return executeWithPrisma(sql, binds);
 }
 
 // 转换 SQL 占位符从 D1 风格 (?) 到 PostgreSQL 风格 ($1, $2, ...)
@@ -70,15 +34,7 @@ function convertPlaceholders(sql: string, binds: any[]): string {
   return sql.replace(/\?/g, () => `$${index++}`);
 }
 
-// 去除 PostgreSQL 专有的类型转换，保证 SQL 在 D1/SQLite 可执行
-function sanitizeSqlForD1(sql: string): string {
-  let s = sql;
-  // 移除 ::type 和 ::"Type"
-  s = s.replace(/::\s*"?[A-Za-z_][A-Za-z0-9_]*"?/g, '');
-  // 移除多余的显式类型转换关键字 CAST(? AS type) -> ? （如存在）
-  s = s.replace(/CAST\(([^)]+)\s+AS\s+[A-Za-z_][A-Za-z0-9_]*\)/gi, '$1');
-  return s;
-}
+// D1 相关兼容代码已移除；应用统一使用 Postgres。
 
 // 使用 Prisma 查询（本地开发）
 async function queryWithPrisma<T>(sql: string, binds: any[]): Promise<T[]> {
