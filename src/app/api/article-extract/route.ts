@@ -118,11 +118,43 @@ async function extractWithPlaywright(url: string): Promise<ExtractResult> {
   }
 }
 
+// 生产环境（Vercel）兜底方案：直接抓取 HTML 并做简易清洗
+async function extractWithHttp(url: string): Promise<ExtractResult> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'accept-language': 'zh-CN,zh;q=0.9'
+      },
+      cache: 'no-store'
+    });
+    const html = await res.text();
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = (titleMatch?.[1] || '未命名文章').trim();
+    // 去掉样式/脚本，剥离标签
+    const text = html
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+      .replace(/<template[\s\S]*?<\/template>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const ok = text.length > 200;
+    return { title, author: null, content: text.slice(0, 20000), html: undefined, ok, debug: { matchedSelector: 'http-fallback', titleSelector: 'title', authorSelector: '' } };
+  } catch {
+    return { title: '未命名文章', content: '', ok: false };
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
     if (!url || typeof url !== 'string') return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
-    const result = await extractWithPlaywright(url);
+    // 在 Vercel（无 Playwright）走 HTTP 兜底；本地优先用 Playwright
+    const useHttpFallback = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    const result = useHttpFallback ? await extractWithHttp(url) : await extractWithPlaywright(url);
     if (!result.ok) return NextResponse.json({ error: 'ContentExtractionFailed', title: result.title }, { status: 422 });
     return NextResponse.json(result);
   } catch (e: any) {
