@@ -6,8 +6,7 @@ export async function requireUser() {
   console.log('[requireUser] Getting session...');
   const session = await getServerSession(authOptions);
   console.log('[requireUser] Session:', session ? 'exists' : 'null');
-  console.log('[requireUser] Full session:', JSON.stringify(session, null, 2));
-  console.log('[requireUser] UserId:', (session as any)?.userId);
+  try { console.log('[requireUser] UserId:', (session as any)?.userId); } catch {}
   
   if (!session || !(session as any).userId) {
     console.log('[requireUser] No session or userId');

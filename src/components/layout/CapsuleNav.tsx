@@ -9,10 +9,15 @@ export default function CapsuleNav() {
         QuizPort
       </Link>
       <span className="text-white/30">|</span>
+      <Link href="/guide" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
+        使用说明
+      </Link>
+      <span className="text-white/30">·</span>
       <Link href="/upload" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
         生成测试
       </Link>
       <span className="text-white/30">·</span>
+
       <Link href="/history" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
         历史题库
       </Link>

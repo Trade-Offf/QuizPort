@@ -25,6 +25,9 @@ function ClearQuizCacheOnLogout() {
           if (k && k.startsWith('qp_set_progress:')) keys.push(k);
         }
         for (const k of keys) localStorage.removeItem(k);
+        // 清理登录标记，避免刷新后误判已登录
+        localStorage.removeItem('qp_session_active');
+        localStorage.removeItem('qp_siwe_last_attempt');
       } catch {}
     }
   }, [status]);

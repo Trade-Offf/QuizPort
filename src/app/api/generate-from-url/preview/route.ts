@@ -154,30 +154,9 @@ function cleanOption(raw: string, maxLen = 60): string {
   return s || '选项';
 }
 
-function fallbackQuestions(text: string, fallbackTitle: string) {
-  const sentences = (text || '')
-    .replace(/\s+/g, ' ')
-    .split(/(?<=[。！？.!?])\s+/)
-    .map((s) => cleanStem(s))
-    .filter((s) => s && s.length >= 8)
-    .slice(0, 20);
-  const qs = sentences.slice(0, 12).map((s, i) => ({
-    id: `fb_${i + 1}`,
-    type: 'boolean',
-    content: s.trim(),
-    options: [],
-    answer: ['T'],
-    explanation: '陈述取自原文',
-    difficulty: i < 7 ? 'easy' : i < 10 ? 'medium' : 'hard',
-    tags: []
-  }));
-  if (qs.length < 10) {
-    // 兜底填充
-    for (let i = qs.length; i < 10; i++) {
-      qs.push({ id: `fb_${i + 1}`, type: 'boolean', content: `${fallbackTitle}：判断正误`, options: [], answer: ['T'], explanation: '基础兜底题', difficulty: 'easy', tags: [] });
-    }
-  }
-  return qs;
+// 严格模式：不再使用“从原文摘抄”的兜底题，保证题目来自模型的理解
+function buildStrictError() {
+  return NextResponse.json({ error: 'AIUnavailableOrFailed', message: '生成模型不可用或生成失败，请稍后重试或配置 API Key' }, { status: 422 });
 }
 
 function normalize(raw: any, fallbackTitle: string) {
@@ -216,8 +195,8 @@ export async function POST(req: Request) {
     const ai = await generateWithDeepSeek(content, safeTitle);
     let questions = normalize(ai ?? { questions: [] }, safeTitle);
     if (questions.length < 10) {
-      // 无 Key 或 AI 失败时，用规则兜底，保证不 422
-      questions = normalize({ questions: fallbackQuestions(content, safeTitle) }, safeTitle);
+      // 严格质量：不再回退到原文摘抄，直接返回 422
+      return buildStrictError();
     }
     
     // 确保至少有10道题目
@@ -225,9 +204,8 @@ export async function POST(req: Request) {
       console.log(`[generate-from-url/preview] Only generated ${questions.length} questions, need at least 10`);
     }
     
-    // 理论上不会走到这里
     if (questions.length === 0) {
-      questions = normalize({ questions: fallbackQuestions(content, safeTitle) }, safeTitle);
+      return buildStrictError();
     }
     
     return NextResponse.json({ title: safeTitle, questions });

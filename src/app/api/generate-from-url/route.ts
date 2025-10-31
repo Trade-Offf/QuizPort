@@ -294,8 +294,10 @@ export async function POST(req: Request) {
       });
     };
 
-    let questions =
-      body?.selectedQuestions ?? ai?.questions ?? naiveGenerateQuestions(article.content);
+    let questions = body?.selectedQuestions ?? ai?.questions ?? [];
+    if (!questions || questions.length === 0) {
+      return NextResponse.json({ error: 'AIUnavailableOrFailed', message: '生成模型不可用或生成失败，请稍后重试或配置 API Key' }, { status: 422 });
+    }
     questions = normalize(questions);
     if (questions.length === 0) questions = normalize(naiveGenerateQuestions(article.content));
 

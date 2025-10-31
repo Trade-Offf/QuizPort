@@ -1,11 +1,22 @@
-import { requireUser, isAddressAdmin } from '@/lib/authz';
+import { requireUser, isAddressAdmin, isAddressWhitelisted } from '@/lib/authz';
 import { notFound, okJson, parseJson, unauthorized } from '@/lib/http';
 import { dbQueryOne, dbExecute } from '@/lib/db';
 
 export async function GET() {
-  const user = await requireUser();
-  if (!user) return unauthorized();
-  return okJson({ user: { ...user, isAdmin: isAddressAdmin(user.walletAddress) } });
+  try {
+    const user = await requireUser();
+    if (!user) return unauthorized();
+    return okJson({
+      user: {
+        ...user,
+        isAdmin: isAddressAdmin(user.walletAddress),
+        isWhitelisted: isAddressWhitelisted(user.walletAddress),
+      },
+    });
+  } catch (e: any) {
+    console.error('[api/me] GET error:', e?.message || e);
+    return okJson({ error: 'Internal Error' }, { status: 500 });
+  }
 }
 
 export async function PATCH(req: Request) {
