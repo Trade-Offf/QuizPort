@@ -9,13 +9,13 @@ import {
   Checkbox,
   Chip,
   Progress,
-  Spinner,
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
 } from '@heroui/react';
+import { useTranslations } from '@/components/providers/LanguageProvider';
 
 type Option = { id: string; text: string };
 type PreviewQuestion = {
@@ -51,6 +51,8 @@ export default function UploadPage() {
     full?: string;
   } | null>(null);
   const canCreate = selected.size >= 10;
+  const upload = useTranslations('upload');
+  const common = useTranslations('common');
 
   const extractArticle = async () => {
     if (!url.trim()) return;
@@ -89,7 +91,7 @@ export default function UploadPage() {
   const genPreview = async () => {
     if (!content) return;
     setGenerating(true);
-    setToast({ message: '正在生成题目，预计 30–60 秒…', tone: 'info' });
+    setToast({ message: upload.toasts.generating, tone: 'info' });
     setQuestions([]);
     setSelected(new Set());
     try {
@@ -101,9 +103,9 @@ export default function UploadPage() {
       const data = await res.json();
       if (res.ok) {
         setQuestions(Array.isArray(data?.questions) ? data.questions : []);
-        setToast({ message: '题目生成完成', tone: 'success' });
+        setToast({ message: upload.toasts.generated, tone: 'success' });
       } else {
-        setToast({ message: '生成失败，请稍后重试', tone: 'danger' });
+        setToast({ message: upload.toasts.generateFailed, tone: 'danger' });
       }
     } finally {
       setGenerating(false);
@@ -128,7 +130,7 @@ export default function UploadPage() {
   const createSet = async () => {
     if (!canCreate || submitting) return;
     setSubmitting(true);
-    setToast({ message: '正在创建测验并发布…', tone: 'info' });
+    setToast({ message: upload.toasts.creating, tone: 'info' });
     try {
       const payload = {
         url,
@@ -145,17 +147,17 @@ export default function UploadPage() {
       
       if (!res.ok) {
         if (res.status === 401) {
-          setToast({ message: '请先登录后再创建题目', tone: 'warning' });
+          setToast({ message: upload.toasts.loginRequired, tone: 'warning' });
         } else if (res.status === 409) {
           const slug409: string | undefined = data?.set?.slug;
           if (slug409) {
             setExistsSlug(slug409);
-            setToast({ message: '该文章的题单已存在', tone: 'info' });
+            setToast({ message: upload.toasts.existing, tone: 'info' });
           } else {
-            setToast({ message: '该文章题单已存在', tone: 'info' });
+            setToast({ message: upload.toasts.existing, tone: 'info' });
           }
         } else {
-          setToast({ message: data?.error || '创建失败，请稍后重试', tone: 'danger' });
+          setToast({ message: data?.error || upload.toasts.createFailed, tone: 'danger' });
         }
         return;
       }
@@ -163,7 +165,7 @@ export default function UploadPage() {
       const slug: string | undefined = data?.set?.slug;
       if (slug) {
         await fetch(`/api/sets/${slug}/publish`, { method: 'POST' });
-        setToast({ message: '创建完成，正在跳转…', tone: 'success' });
+        setToast({ message: upload.toasts.created, tone: 'success' });
         window.location.href = `/set/${slug}`;
       }
     } finally {
@@ -181,12 +183,10 @@ export default function UploadPage() {
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center text-center md:items-start md:text-left gap-2">
-          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
-            从博客 URL 生成并挑选题目
-          </h1>
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">{upload.title}</h1>
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur px-3 py-1 text-xs md:text-sm text-white/80 ring-1 ring-white/10">
             <span className="inline-block h-2 w-2 rounded-full bg-white/70" />
-            粘贴文章链接，获取标题与正文预览
+            {upload.subtitleBadge}
           </div>
         </div>
 
@@ -197,7 +197,7 @@ export default function UploadPage() {
             variant="bordered"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://juejin.cn/post/xxxxxxxx"
+            placeholder={upload.placeholder}
           />
           <Button
             onPress={extractArticle}
@@ -207,36 +207,36 @@ export default function UploadPage() {
             isDisabled={extracting}
             isLoading={extracting}
           >
-            获取文章预览
+            {upload.fetchButton}
           </Button>
         </div>
 
         {debug && (
           <Card className="mt-6 rounded-2xl">
-            <CardHeader className="text-base font-semibold">文章预览</CardHeader>
+            <CardHeader className="text-base font-semibold">{upload.previewCard.title}</CardHeader>
             <CardBody className="space-y-3">
               <div className="text-sm text-gray-600">
-                抓取来源：{debug.source} · 命中 article-root：
-                {debug.matchedArticleRoot ? '是' : '否'}
+                {upload.previewCard.sourceLabel}：{debug.source} · {upload.previewCard.articleBodyLabel}：
+                {debug.matchedArticleRoot ? common.yes : common.no}
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-900">标题</div>
-                <div className="text-sm text-gray-800">{title || '（空）'}</div>
+                <div className="text-sm font-medium text-gray-900">{upload.previewCard.titleLabel}</div>
+                <div className="text-sm text-gray-800">{title || upload.previewCard.titleEmpty}</div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-900">作者</div>
-                <div className="text-sm text-gray-800">{author || '（未识别）'}</div>
+                <div className="text-sm font-medium text-gray-900">{upload.previewCard.authorLabel}</div>
+                <div className="text-sm text-gray-800">{author || upload.previewCard.authorEmpty}</div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-900">正文（前 200 字）</div>
+                <div className="text-sm font-medium text-gray-900">{upload.previewCard.contentLabel}</div>
                 <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-default-100 p-3 text-sm text-gray-800">
-                  {debug.excerpt || '（空）'}
+                  {debug.excerpt || upload.previewCard.contentEmpty}
                 </pre>
               </div>
               {debug.full && (
                 <details className="mt-1">
                   <summary className="cursor-pointer text-sm text-gray-600">
-                    展开查看全文（纯文本）
+                    {upload.previewCard.expandLabel}
                   </summary>
                   <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-default-50 p-3 text-sm text-gray-800">
                     {content}
@@ -251,10 +251,10 @@ export default function UploadPage() {
                   isDisabled={!content}
                   isLoading={generating}
                 >
-                  基于该文章生成题目预览
+                  {upload.previewCard.generateButton}
                 </Button>
                 <div className="text-xs md:text-sm text-gray-500">
-                  预计需要 30–60 秒，请耐心等待
+                  {upload.previewCard.generateHint}
                 </div>
               </div>
             </CardBody>
@@ -265,9 +265,9 @@ export default function UploadPage() {
           <section className="mt-8">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-lg font-medium">{title || '预览'}</div>
+                <div className="text-lg font-medium">{title || upload.previewCard.previewTitleFallback}</div>
                 <div className="text-sm text-gray-600">
-                  已选 {selected.size} / {questions.length}（需 ≥ 10）
+                  {upload.selectionSummary(selected.size, questions.length, 10)}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function UploadPage() {
                   radius="lg"
                   className="text-white border-white/30 hover:text-white"
                 >
-                  全选
+                  {upload.actions.selectAll}
                 </Button>
                 <Button
                   variant="bordered"
@@ -285,7 +285,7 @@ export default function UploadPage() {
                   radius="lg"
                   className="text-white border-white/30 hover:text-white"
                 >
-                  清空
+                  {upload.actions.clearAll}
                 </Button>
                 <Button
                   color="success"
@@ -294,15 +294,17 @@ export default function UploadPage() {
                   isDisabled={!canCreate || submitting}
                   isLoading={submitting}
                 >
-                  {submitting ? '创建中…' : '创建'}
+                  {submitting ? upload.actions.creating : upload.actions.create}
                 </Button>
-                <div className="text-xs text-gray-500">至少选择 10 题即可创建</div>
+                <div className="text-xs text-gray-500">
+                  {upload.actions.createHint}
+                </div>
               </div>
             </div>
 
             <div className="mb-4">
               <Progress
-                aria-label="选题进度"
+                aria-label={upload.progressAria}
                 size="sm"
                 radius="lg"
                 value={Math.min(selected.size, 10) * 10}
@@ -338,7 +340,7 @@ export default function UploadPage() {
                             : 'text-green-600'
                         }`}
                       >
-                        {q.type === 'single' ? '单选' : q.type === 'multiple' ? '多选' : '判断'}
+                        {upload.questionTypes[q.type]}
                       </span>
                       <Chip
                         size="sm"
@@ -351,7 +353,7 @@ export default function UploadPage() {
                         }
                         variant="flat"
                       >
-                        {q.difficulty || 'easy'}
+                        {upload.difficulty[q.difficulty || 'easy']}
                       </Chip>
                     </div>
                     <ul className="mt-3 space-y-2 text-sm text-gray-700">
@@ -365,10 +367,14 @@ export default function UploadPage() {
                       ))}
                     </ul>
                     {q.explanation && (
-                      <div className="mt-2 text-xs text-gray-500">解析：{q.explanation}</div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        {upload.explanationLabel}
+                        {q.explanation}
+                      </div>
                     )}
                     <div className="mt-2 text-xs text-gray-500">
-                      类型：{q.type} · 难度：{q.difficulty || 'easy'}
+                      {upload.meta.type}：{upload.questionTypes[q.type]} · {upload.meta.difficulty}：
+                      {upload.difficulty[q.difficulty || 'easy']}
                     </div>
                   </CardBody>
                 </Card>
@@ -376,6 +382,7 @@ export default function UploadPage() {
             </div>
           </section>
         )}
+        <p className="mt-10 text-sm text-white/70">{upload.bottomNote}</p>
       </div>
       {toast && (
         <div
@@ -394,14 +401,14 @@ export default function UploadPage() {
       )}
       <Modal isOpen={!!existsSlug} onOpenChange={(open) => { if (!open) setExistsSlug(null); }} classNames={{ base: 'text-black' }}>
         <ModalContent>
-          <ModalHeader className="text-base font-semibold">题单已存在</ModalHeader>
+          <ModalHeader className="text-base font-semibold">{upload.modal.title}</ModalHeader>
           <ModalBody>
-            <div className="text-sm text-gray-700">该文章的题单已创建。你可以直接进入做题。</div>
+            <div className="text-sm text-gray-700">{upload.modal.description}</div>
           </ModalBody>
           <ModalFooter>
-            <Button variant="light" onPress={() => setExistsSlug(null)}>我知道了</Button>
+            <Button variant="light" onPress={() => setExistsSlug(null)}>{upload.modal.dismiss}</Button>
             {existsSlug && (
-              <Button color="primary" onPress={() => { window.location.href = `/set/${existsSlug}`; }}>去做题</Button>
+              <Button color="primary" onPress={() => { window.location.href = `/set/${existsSlug}`; }}>{upload.modal.confirm}</Button>
             )}
           </ModalFooter>
         </ModalContent>

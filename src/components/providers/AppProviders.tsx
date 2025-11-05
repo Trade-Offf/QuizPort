@@ -13,6 +13,7 @@ import { BlockieAvatar } from '@/components/BlockieAvatar';
 import { AutoSiwe } from '@/components/AutoSiwe';
 import { AutoSignoutOnDisconnect } from '@/components/AutoSignoutOnDisconnect';
 import { useEffect } from 'react';
+import { LanguageProvider } from './LanguageProvider';
 
 function ClearQuizCacheOnLogout() {
   const { status } = useSession();
@@ -52,10 +53,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider avatar={BlockieAvatar} theme={lightTheme()}>
             <HeroUIProvider navigate={(...args: any[]) => (router.push as any)(...args)}>
-              <AutoSiwe />
-              <AutoSignoutOnDisconnect />
-              <ClearQuizCacheOnLogout />
-              {children}
+              <LanguageProvider>
+                <AutoSiwe />
+                <AutoSignoutOnDisconnect />
+                <ClearQuizCacheOnLogout />
+                {children}
+              </LanguageProvider>
             </HeroUIProvider>
           </RainbowKitProvider>
         </QueryClientProvider>

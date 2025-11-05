@@ -1,8 +1,13 @@
+"use client";
+
 import { Button } from '@heroui/react';
 import Link from 'next/link';
 import LiquidEther from '@/components/LiquidEther';
+import { useTranslations } from '@/components/providers/LanguageProvider';
 
 export default function HomePage() {
+  const home = useTranslations('home');
+
   return (
     <main className="relative min-h-screen text-white bg-[#0b0912]">
       {/* 背景层：铺满容器，放在内容层下方 */}
@@ -29,10 +34,10 @@ export default function HomePage() {
       <section className="relative z-10 mx-auto flex max-w-[1120px] flex-col items-center px-6 pt-16 pb-20 text-center md:pt-24">
         {/* 主标题 */}
         <h1 className="mt-32 text-[44px] md:text-[88px] leading-[1.06] font-extrabold tracking-tight">
-          问以明之,习以成之
+          {home.heroTitle}
         </h1>
         <p className="mt-5 max-w-2xl text-white/80 text-[20px] md:text-[24px]">
-          一键从文章到试题，智能抽取要点、生成多题型，助力高效巩固
+          {home.heroSubtitle}
         </p>
 
         {/* CTA */}
@@ -44,7 +49,7 @@ export default function HomePage() {
             radius="full"
             className="bg-white text-gray-900 shadow-lg hover:shadow-xl"
           >
-            开始测试
+            {home.ctaPrimary}
           </Button>
           <Button
             as={Link}
@@ -54,13 +59,25 @@ export default function HomePage() {
             radius="full"
             className="border-white/30 text-white/80 hover:text-white"
           >
-            历史题库
+            {home.ctaSecondary}
+          </Button>
+          <Button
+            as={Link}
+            href="/guide"
+            variant="light"
+            size="lg"
+            radius="full"
+            className="text-white/80 hover:text-white"
+          >
+            {home.ctaGuide}
           </Button>
         </div>
 
         {/* Tips */}
         <p className="mt-24 text-medium text-white/60">
-          Tips：由于模型调用价格，所以生成测试题目功能仅对白名单开放，如果有想体验的朋友请掘金私信:
+          {home.tip1Prefix}
+          <span className="font-semibold">{home.tip1Guide}</span>
+          {home.tip1Middle}
           <a
             href="https://juejin.cn/user/1591748568038823"
             target="_blank"
@@ -69,9 +86,10 @@ export default function HomePage() {
           >
             HiStewie
           </a>
+          {home.tip1Suffix}
         </p>
         <p className="mt-2 text-medium text-white/60">
-          目前仅支持「稀土掘金」题目生成，后续会支持其他平台。
+          {home.tip2}
         </p>
       </section>
     </main>

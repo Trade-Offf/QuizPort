@@ -13,6 +13,7 @@ import {
 } from '@heroui/react';
 import { useSession } from 'next-auth/react';
 import { useAccount } from 'wagmi';
+import { useTranslations } from '@/components/providers/LanguageProvider';
 
 function Step({
   num,
@@ -56,7 +57,7 @@ function Step({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-base md:text-lg font-semibold leading-7">{title}</div>
+            <div className="text-base md:text-lg font-semibold leading-7 whitespace-pre-line">{title}</div>
             <p className="mt-1 text-sm text-white/80 leading-6 whitespace-pre-line">{desc}</p>
             {actions && <div className="mt-3 flex flex-wrap items-center gap-2">{actions}</div>}
             {extra && <div className="mt-2">{extra}</div>}
@@ -69,13 +70,13 @@ function Step({
 
 export default function GuidePage() {
   const repo = (process.env as any)['NEXT_PUBLIC_GITHUB_REPO'] || '';
-  const contactUrl = (process.env as any)['NEXT_PUBLIC_CONTACT_URL'] || '';
   const { data: session } = useSession();
   const { address: wagmiAddress } = useAccount();
   const [hasInjected, setHasInjected] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [isWhitelisted, setIsWhitelisted] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const guide = useTranslations('guide');
 
   useEffect(() => {
     try {
@@ -110,24 +111,28 @@ export default function GuidePage() {
     const s = String(addr);
     return s.length > 10 ? `${s.slice(0, 4)}...${s.slice(-4)}` : s;
   }, [walletAddress, wagmiAddress]);
-
-  const userName = useMemo(() => session?.user?.name || '', [session]);
+  const step1 = guide.steps.step1;
+  const step2 = guide.steps.step2;
+  const step3 = guide.steps.step3;
+  const step4 = guide.steps.step4;
+  const step5 = guide.steps.step5;
+  const step6 = guide.steps.step6;
 
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-4xl">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-          使用说明 · Getting Started
+          {guide.title}
         </h1>
         <p className="mt-2 text-sm md:text-base text-white/70">
-          按以下步骤快速上手，从安装钱包到生成题单、发布与分享。
+          {guide.subtitle}
         </p>
 
         <div className="mt-6 grid gap-4">
           <Step
             num={1}
-            title="安装 MetaMask 插件"
-            desc="为你的浏览器安装 MetaMask 插件（已安装可跳过）。选择你的浏览器："
+            title={step1.title}
+            desc={step1.desc}
             checked={hasInjected}
             actions={
               <>
@@ -138,7 +143,7 @@ export default function GuidePage() {
                   color="success"
                   radius="lg"
                 >
-                  安装 Chrome 版
+                  {step1.actions.chrome}
                 </Button>
                 <Button
                   as={Link}
@@ -147,7 +152,7 @@ export default function GuidePage() {
                   color="secondary"
                   radius="lg"
                 >
-                  安装 Firefox 版
+                  {step1.actions.firefox}
                 </Button>
                 <Button
                   as={Link}
@@ -156,7 +161,7 @@ export default function GuidePage() {
                   color="danger"
                   radius="lg"
                 >
-                  安装 Opera 版
+                  {step1.actions.opera}
                 </Button>
               </>
             }
@@ -164,11 +169,11 @@ export default function GuidePage() {
 
           <Step
             num={2}
-            title="创建账户并登录"
+            title={step2.title}
             desc={
               !session?.user
-                ? '请点击右上角“连接钱包”完成签名登录（SIWE）。首次登录会自动为你创建账号。'
-                : ''
+                ? step2.descLoggedOut
+                : step2.descLoggedIn
             }
             checked={!!session?.user}
             actions={null}
@@ -182,7 +187,9 @@ export default function GuidePage() {
                     alt="avatar"
                     className="h-8 w-8 rounded-full"
                   />
-                  <span className="font-mono text-sm text-white/80">{displayAddress || '已登录'}</span>
+                  <span className="font-mono text-sm text-white/80">
+                    {displayAddress || step2.signedInLabel}
+                  </span>
                 </div>
               ) : null
             }
@@ -190,10 +197,8 @@ export default function GuidePage() {
 
           <Step
             num={3}
-            title="申请内测权限（白名单）"
-            desc={
-              '联系我开通生成权限（控制模型开销，内测期免费）。可选：给 GitHub 项目点个 Star 支持我们。'
-            }
+            title={step3.title}
+            desc={step3.desc}
             checked={isWhitelisted}
             actions={
               <>
@@ -204,10 +209,10 @@ export default function GuidePage() {
                   radius="lg"
                   color="secondary"
                 >
-                  前往 GitHub 项目
+                  {step3.buttons.github}
                 </Button>
                 <Button radius="lg" color="primary" onPress={() => setContactOpen(true)}>
-                  联系作者
+                  {step3.buttons.contact}
                 </Button>
               </>
             }
@@ -216,14 +221,12 @@ export default function GuidePage() {
 
           <Step
             num={4}
-            title="从文章生成题目预览（目前仅支持掘金）"
-            desc={
-              '进入“生成测试”页，粘贴文章 URL → 获取预览 → 点击“基于该文章生成题目预览”。模型会基于知识点理解出题。'
-            }
+            title={step4.title}
+            desc={step4.desc}
             extra={
               <img
                 src="/04-copyUrl.png"
-                alt="复制链接示意图"
+                alt={step4.imageAlt}
                 className="rounded shadow-lg ring-1 ring-white/10 w-full max-w-3xl"
               />
             }
@@ -231,16 +234,19 @@ export default function GuidePage() {
 
           <Step
             num={5}
-            title="勾选题目并创建题单"
-            desc={'从预览中勾选 ≥ 10 题，点击“创建”。系统会新建一个题单（draft），然后你可以发布。'}
+            title={step5.title}
+            desc={step5.desc}
           />
 
           <Step
             num={6}
-            title="发布题单并分享"
-            desc={'发布后题单变为 public。你可以复制链接或在历史题库中生成分享卡片。'}
+            title={step6.title}
+            desc={step6.desc}
           />
         </div>
+        <p className="mt-8 text-sm text-white/70">
+          {guide.whitelistNote}
+        </p>
       </div>
       {/* 联系作者二维码 Modal */}
       <Modal
@@ -250,19 +256,19 @@ export default function GuidePage() {
         classNames={{ base: 'text-black' }}
       >
         <ModalContent>
-          <ModalHeader className="text-base font-semibold">微信扫码联系作者</ModalHeader>
+          <ModalHeader className="text-base font-semibold">{guide.contactModal.title}</ModalHeader>
           <ModalBody>
             <div className="w-full flex items-center justify-center">
               <img
                 src="/03-wechat.JPG"
-                alt="微信二维码"
+                alt={guide.contactModal.qrAlt}
                 className="h-[300px] max-h-[70vh] w-auto max-w-[85vw] object-contain rounded-lg"
               />
             </div>
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setContactOpen(false)}>
-              关闭
+              {guide.contactModal.close}
             </Button>
           </ModalFooter>
         </ModalContent>
