@@ -27,6 +27,11 @@ export default function CapsuleNav() {
       <Link href="/history" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
         {nav.history}
       </Link>
+      <span className="text-white/30">·</span>
+      <Link href="/remote" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
+        {nav.remote}
+      </Link>
+
       <span className="ml-3 hidden md:inline-block">
         <div className="scale-95 md:scale-100">
           <ConnectButton />

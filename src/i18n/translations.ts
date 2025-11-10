@@ -4,6 +4,7 @@ type NavTranslations = {
   guide: string;
   upload: string;
   history: string;
+  remote: string;
   languageLabel: string;
 };
 
@@ -139,11 +140,23 @@ type CommonTranslations = {
   signedInFallback: string;
 };
 
+// Remote jobs page translations
+type RemoteTranslations = {
+  title: string;
+  subtitle: string;
+  groups: {
+    zh: string;
+    global: string;
+  };
+};
+
+
 export type TranslationSchema = {
   nav: NavTranslations;
   home: HomeTranslations;
   guide: GuideTranslations;
   upload: UploadTranslations;
+  remote: RemoteTranslations;
   common: CommonTranslations;
 };
 
@@ -153,6 +166,7 @@ export const translations: Record<Lang, TranslationSchema> = {
       guide: '使用说明',
       upload: '生成测试',
       history: '历史题库',
+      remote: 'Remote求职',
       languageLabel: '语言',
     },
     home: {
@@ -282,6 +296,16 @@ export const translations: Record<Lang, TranslationSchema> = {
         confirm: '去做题',
       },
     },
+    remote: {
+      title: 'Remote 求职导航',
+      subtitle:
+        '精选远程/混合办公招聘网站与社区，点击卡片直达官网。建议结合时区、签证/合规与薪资范围筛选。',
+      groups: {
+        zh: '中文站点',
+        global: '全球站点',
+      },
+    },
+
     common: {
       languageOptions: {
         zh: '中文',
@@ -297,6 +321,7 @@ export const translations: Record<Lang, TranslationSchema> = {
       guide: 'Guide',
       upload: 'Generate',
       history: 'Library',
+      remote: 'Remote Jobs',
       languageLabel: 'Language',
     },
     home: {
@@ -417,6 +442,7 @@ export const translations: Record<Lang, TranslationSchema> = {
       meta: {
         type: 'Type',
         difficulty: 'Difficulty',
+
       },
       bottomNote:
         'QuizPort 1.0 is in closed beta. Whitelisted users can generate quizzes for free. To request access or share feedback, follow the guide on the homepage.',
@@ -436,6 +462,16 @@ export const translations: Record<Lang, TranslationSchema> = {
       no: 'No',
       signedInFallback: 'Signed in',
     },
+    remote: {
+      title: 'Remote Jobs Directory',
+      subtitle:
+        'Curated remote/hybrid job boards and communities. Click a card to visit. Consider time zone, work authorization/compliance, and salary range filters.',
+      groups: {
+        zh: 'Chinese sites',
+        global: 'Global sites',
+      },
+    },
+
   },
 };
 

@@ -54,10 +54,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
           <RainbowKitProvider avatar={BlockieAvatar} theme={lightTheme()}>
             <HeroUIProvider navigate={(...args: any[]) => (router.push as any)(...args)}>
               <LanguageProvider>
-                <AutoSiwe />
-                <AutoSignoutOnDisconnect />
-                <ClearQuizCacheOnLogout />
-                {children}
+              <AutoSiwe />
+              <AutoSignoutOnDisconnect />
+              <ClearQuizCacheOnLogout />
+              {children}
               </LanguageProvider>
             </HeroUIProvider>
           </RainbowKitProvider>
