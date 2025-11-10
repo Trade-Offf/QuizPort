@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { Card, CardHeader, CardBody, Chip, Link as UiLink, Button } from '@heroui/react';
 import Link from 'next/link';
 import { DebugMeta } from './DebugMeta';
@@ -7,6 +8,24 @@ async function getData(slug: string) {
   const res = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sets/${slug}`, { cache: 'no-store' });
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const slug = params.slug;
+  try {
+    const data = await getData(slug);
+    const title = data?.set?.title ? `${data.set.title}` : '题单';
+    const description = (data?.set?.description || '').slice(0, 160) || '题单';
+    return {
+      title,
+      description,
+      alternates: { canonical: `/set/${slug}` },
+      openGraph: { title, description, url: `/set/${slug}`, type: 'article' },
+      robots: { index: true, follow: true },
+    };
+  } catch {
+    return { title: '题单', alternates: { canonical: `/set/${slug}` } };
+  }
 }
 
 export default async function SetPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -20,9 +39,22 @@ export default async function SetPage({ params }: { params: Promise<{ slug: stri
   let host = '';
   try { if (sourceUrl) host = new URL(sourceUrl).hostname; } catch {}
 
+  const ld: any = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: set.title,
+    mainEntityOfPage: `/set/${slug}`,
+    itemListElement: (quizzes || []).slice(0, 20).map((q: any, i: number) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: { '@type': 'Question', name: q.title },
+    })),
+  };
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
         <DebugMeta title={set.title} author={authorMatch?.[1] || null} sourceUrl={sourceUrl || null} host={host || null} description={set.description || ''} />
         <Card className="rounded-2xl bg-white/5 border border-white/10 text-white">
           <CardBody>

@@ -8,8 +8,23 @@ import NonHomeBackdrop from '@/components/layout/NonHomeBackdrop';
 import { RouteLoading } from '@/components/RouteLoading';
 
 export const metadata: Metadata = {
-  title: 'QuizPort',
-  description: '在线习题站，用于文章末尾跳转引流',
+  metadataBase: new URL(process.env['NEXT_PUBLIC_SITE_URL'] || process.env['NEXTAUTH_URL'] || 'https://www.quizport.org'),
+  title: { default: 'QuizPort', template: '%s · QuizPort' },
+  description: 'AI 生成测验与远程学习工具（支持中英）。',
+  openGraph: {
+    type: 'website',
+    siteName: 'QuizPort',
+    url: '/',
+    title: 'QuizPort',
+    description: 'AI 生成测验与远程学习工具（支持中英）。',
+  },
+  twitter: { card: 'summary_large_image' },
+  robots: { index: true, follow: true },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

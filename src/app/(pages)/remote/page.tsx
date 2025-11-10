@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardBody } from '@heroui/react';
 import { useLanguage, useTranslations } from '@/components/providers/LanguageProvider';
 
@@ -155,6 +156,20 @@ export default function RemoteJobsPage() {
   const zhSites = JOB_BOARDS.filter((s) => s.group === 'zh');
   const globalSites = JOB_BOARDS.filter((s) => s.group === 'global');
 
+  const ld = useMemo(() => ({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: remote.title,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: [...globalSites, ...zhSites].map((s, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: s.url,
+      })),
+    },
+  }), [remote.title, zhSites, globalSites]);
+
   const Cards = ({ items }: { items: JobBoard[] }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((site) => (
@@ -194,6 +209,7 @@ export default function RemoteJobsPage() {
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{remote.title}</h1>
         <p className="mt-2 text-sm md:text-base text-white/70">{remote.subtitle}</p>
+        <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
 
         <h2 className="mt-8 text-xl font-bold">{remote.groups.zh}</h2>
         <Cards items={zhSites} />
