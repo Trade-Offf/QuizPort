@@ -18,6 +18,31 @@ type JobBoard = {
 
 const JOB_BOARDS: JobBoard[] = [
   {
+    name: 'web3.career',
+    url: 'https://web3.career/',
+    domain: 'web3.career',
+    group: 'global',
+    descZh: '大型 Web3/加密/区块链职位板，支持 Remote 过滤与薪资标签。',
+    descEn: 'Large Web3/crypto/blockchain job board with remote filters and salary tags.',
+  },
+  {
+    name: 'CryptoJobsList',
+    url: 'https://cryptojobslist.com/',
+    domain: 'cryptojobslist.com',
+    group: 'global',
+    descZh: '历史较久的加密/Web3 职位板，覆盖工程、产品、运营等，多远程。',
+    descEn: 'Long‑running crypto/Web3 board across engineering, product, operations; many remote.',
+  },
+  {
+    name: 'Remote3',
+    url: 'https://remote3.co/',
+    domain: 'remote3.co',
+    group: 'global',
+    descZh: '专注 Web3 的 Remote 职位聚合，项目方/协议方岗位居多。',
+    descEn: 'Remote‑first Web3 jobs aggregator with roles from protocols/projects.',
+  },
+
+  {
     name: 'Remote OK',
     url: 'https://remoteok.com/',
     domain: 'remoteok.com',
@@ -88,14 +113,6 @@ const JOB_BOARDS: JobBoard[] = [
     group: 'global',
     descZh: '每日精选远程职位，浏览便捷，可订阅邮件推送。',
     descEn: 'Daily curated remote jobs; convenient browsing and email digests.',
-  },
-  {
-    name: 'Jobspresso',
-    url: 'https://jobspresso.co/',
-    domain: 'jobspresso.co',
-    group: 'global',
-    descZh: '人工精选高质量远程职位，偏产品/设计/开发/运营类。',
-    descEn: 'Expertly curated high‑quality remote roles.',
   },
   {
     name: 'EU Remote Jobs',
