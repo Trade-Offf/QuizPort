@@ -132,6 +132,14 @@ const JOB_BOARDS: JobBoard[] = [
     descEn: 'Remote/global developer jobs, filter by skills and time zone.',
   },
   {
+    name: 'DeJob',
+    url: 'https://www.dejob.top/',
+    domain: 'dejob.top',
+    group: 'zh',
+    descZh: '专注 Web3/区块链的中文招聘平台，包含远程岗位与社区频道。',
+    descEn: 'Chinese Web3/crypto job board with remote roles and community.',
+  },
+  {
     name: '电鸭社区',
     url: 'https://eleduck.com/',
     domain: 'eleduck.com',

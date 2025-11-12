@@ -9,26 +9,29 @@ export default function CapsuleNav() {
   const nav = useTranslations('nav');
   const common = useTranslations('common');
 
+
+  const linkCls = 'group inline-flex items-center rounded-full px-3 py-1.5 cursor-pointer text-white/90 text-[15px] md:text-[18px] transition-colors duration-200 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40';
+
   return (
     <div className="mx-auto inline-flex items-center gap-4 rounded-full bg-black/40 backdrop-blur px-6 md:px-8 py-3 ring-1 ring-white/15 shadow-[0_2px_12px_rgba(0,0,0,0.25)]">
-      <Link href="/" className="text-white font-extrabold text-[20px] md:text-[22px]">
+      <Link href="/" className="text-white font-extrabold text-[20px] md:text-[22px] transition-colors hover:opacity-90 cursor-pointer rounded-full px-2 hover:bg-white/10">
         QuizPort
       </Link>
       <span className="text-white/30">|</span>
-      <Link href="/guide" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
+      <Link href="/guide" className={linkCls}>
         {nav.guide}
       </Link>
       <span className="text-white/30">·</span>
-      <Link href="/upload" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
+      <Link href="/upload" className={linkCls}>
         {nav.upload}
       </Link>
       <span className="text-white/30">·</span>
 
-      <Link href="/history" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
+      <Link href="/history" className={linkCls}>
         {nav.history}
       </Link>
       <span className="text-white/30">·</span>
-      <Link href="/remote" className="text-white text-[15px] md:text-[18px] hover:text-white/90">
+      <Link href="/remote" className={linkCls}>
         {nav.remote}
       </Link>
 
