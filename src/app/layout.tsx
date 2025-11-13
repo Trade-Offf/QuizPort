@@ -6,6 +6,10 @@ import CapsuleNav from '@/components/layout/CapsuleNav';
 import PageOffset from '@/components/layout/PageOffset';
 import NonHomeBackdrop from '@/components/layout/NonHomeBackdrop';
 import { RouteLoading } from '@/components/RouteLoading';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/next';
+
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env['NEXT_PUBLIC_SITE_URL'] || process.env['NEXTAUTH_URL'] || 'https://www.quizport.org'),
@@ -49,6 +53,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <NonHomeBackdrop />
           <PageOffset>{children}</PageOffset>
         </AppProviders>
+        {process.env.NODE_ENV === 'production' && <SpeedInsights />}
+        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   );
