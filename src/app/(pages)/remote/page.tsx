@@ -132,6 +132,14 @@ const JOB_BOARDS: JobBoard[] = [
     descEn: 'Remote/global developer jobs, filter by skills and time zone.',
   },
   {
+    name: 'A Better Web3',
+    url: 'https://abetterweb3.notion.site/e3577a9eea1746b18b6421227cfa3ccf?v=5b432f85f7574962a712e1f2cb53b6fa',
+    domain: 'abetterweb3.notion.site',
+    group: 'zh',
+    descZh: '中文 Web3 求职信息聚合，Notion 数据库形式，涵盖多家公司与岗位。',
+    descEn: 'Chinese Web3 job aggregator in Notion database with multiple companies.',
+  },
+  {
     name: 'DeJob',
     url: 'https://www.dejob.top/',
     domain: 'dejob.top',
@@ -154,6 +162,14 @@ const JOB_BOARDS: JobBoard[] = [
     group: 'zh',
     descZh: '中文远程工作聚合站，提供多岗位与公司信息。',
     descEn: 'Chinese remote jobs aggregator with multiple roles and companies.',
+  },
+  {
+    name: 'V2EX',
+    url: 'https://www.v2ex.com/',
+    domain: 'v2ex.com',
+    group: 'zh',
+    descZh: '中文创意工作者社区，酷工作板块汇集远程/全职/兼职等多种机会。',
+    descEn: 'Chinese creative community with job board for remote/full-time/part-time roles.',
   },
 ];
 
