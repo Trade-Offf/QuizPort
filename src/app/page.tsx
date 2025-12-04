@@ -44,12 +44,12 @@ export default function HomePage() {
         <div className="mt-16 flex flex-wrap items-center justify-center gap-4">
           <Button
             as={Link}
-            href="/guide"
+            href="/interview-prep"
             size="lg"
             radius="full"
             className="bg-white text-gray-900 shadow-lg hover:shadow-xl"
           >
-            {home.ctaGuide}
+            {home.ctaInterview}
           </Button>
           <Button
             as={Link}
@@ -62,25 +62,6 @@ export default function HomePage() {
             {home.ctaRemote}
           </Button>
         </div>
-
-        {/* Tips */}
-        <p className="mt-24 text-medium text-white/60">
-          {home.tip1Prefix}
-          <span className="font-semibold">{home.tip1Guide}</span>
-          {home.tip1Middle}
-          <a
-            href="https://juejin.cn/user/1591748568038823"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-2 underline text-white/80 hover:text-white"
-          >
-            HiStewie
-          </a>
-          {home.tip1Suffix}
-        </p>
-        <p className="mt-2 text-medium text-white/60">
-          {home.tip2}
-        </p>
       </section>
     </main>
   );

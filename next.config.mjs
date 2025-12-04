@@ -18,7 +18,16 @@ const nextConfig = {
       // 避免浏览器端/Edge 构建中解析到仅用于 Node/React Native 的依赖
       config.resolve.alias['pino-pretty'] = false;
       config.resolve.alias['@react-native-async-storage/async-storage'] = false;
+      // 避免浏览器端解析 pdf.js-extract (仅用于服务端)
+      config.resolve.alias['pdf.js-extract'] = false;
     }
+
+    // 允许 pdf-parse 在服务端使用 canvas (可选依赖)
+    config.externals = config.externals || [];
+    if (isServer) {
+      config.externals.push('canvas');
+    }
+
     return config;
   },
 };

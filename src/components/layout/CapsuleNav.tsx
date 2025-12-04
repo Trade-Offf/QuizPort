@@ -1,6 +1,5 @@
 'use client';
 import Link from 'next/link';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useLanguage, useTranslations } from '@/components/providers/LanguageProvider';
 import type { Lang } from '@/i18n/translations';
 
@@ -8,7 +7,6 @@ export default function CapsuleNav() {
   const { lang, setLang } = useLanguage();
   const nav = useTranslations('nav');
   const common = useTranslations('common');
-
 
   const linkCls = 'group inline-flex items-center rounded-full px-3 py-1.5 cursor-pointer text-white/90 text-[15px] md:text-[18px] transition-colors duration-200 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40';
 
@@ -18,19 +16,14 @@ export default function CapsuleNav() {
         QuizPort
       </Link>
       <span className="text-white/30">|</span>
-      <Link href="/guide" className={linkCls}>
-        {nav.guide}
+      <Link href="/interview-prep" className={linkCls}>
+        {nav.interview}
       </Link>
       <span className="text-white/30">·</span>
       <Link href="/remote" className={linkCls}>
         {nav.remote}
       </Link>
 
-      <span className="ml-3 hidden md:inline-block">
-        <div className="scale-95 md:scale-100">
-          <ConnectButton />
-        </div>
-      </span>
       <div className="ml-3 flex items-center gap-2">
         <label htmlFor="language-selector" className="hidden text-xs text-white/60 md:block">
           {nav.languageLabel}
