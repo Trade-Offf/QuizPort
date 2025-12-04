@@ -1,8 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 
 // Force Node.js runtime (not Edge)
 export const runtime = 'nodejs';
+
+// Helper: Call AI with fallback
+async function callAIWithFallback(prompt: string, options: { json?: boolean } = {}) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it'];
+
+  // Try Groq models first
+  for (const model of groqModels) {
+    try {
+      console.log('[AI] Trying Groq model:', model);
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model,
+        temperature: 0.3,
+        ...(options.json ? { response_format: { type: 'json_object' as const } } : {})
+      });
+      console.log('[AI] Success with Groq:', model);
+      return completion.choices[0].message.content || '';
+    } catch (err: any) {
+      const errStr = String(err.message || err);
+      console.warn('[AI] Groq failed:', model, errStr.substring(0, 80));
+      const isRateLimit = errStr.includes('429') || errStr.includes('rate_limit') || errStr.includes('Rate limit');
+      if (!isRateLimit) throw err;
+    }
+  }
+
+  // Fallback to OpenAI-compatible API
+  if (process.env.FALLBACK_API_KEY && process.env.FALLBACK_API_BASE) {
+    try {
+      console.log('[AI] Trying fallback API...');
+      const openai = new OpenAI({
+        apiKey: process.env.FALLBACK_API_KEY,
+        baseURL: process.env.FALLBACK_API_BASE,
+      });
+      const completion = await openai.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'gpt-4o-mini', // 或者其他支持的模型
+        temperature: 0.3,
+        ...(options.json ? { response_format: { type: 'json_object' as const } } : {})
+      });
+      console.log('[AI] Success with fallback API');
+      return completion.choices[0].message.content || '';
+    } catch (err: any) {
+      console.error('[AI] Fallback API failed:', err.message);
+      throw err;
+    }
+  }
+
+  throw new Error('All AI providers rate limited');
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,7 +120,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Analyze resume with LLM (comprehensive analysis)
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const analysisPrompt = language === 'zh'
       ? `你是一位资深的${getInterviewTypeText(interviewType, 'zh')}技术面试官。请仔细分析以下简历，提取所有关键信息。
@@ -167,14 +217,9 @@ Note:
 2. If information is not available in resume, return empty array [] or empty string ""
 3. Ensure valid JSON format`;
 
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: analysisPrompt }],
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.3,
-      response_format: { type: 'json_object' }
-    });
-
-    const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+    // 使用带 fallback 的 AI 调用
+    const result = await callAIWithFallback(analysisPrompt, { json: true });
+    const analysis = JSON.parse(result || '{}');
 
     // 3. Generate interview plan
     const interviewPlan = generateInterviewPlan(analysis, interviewType, language);
@@ -187,12 +232,19 @@ Note:
 
   } catch (error: any) {
     console.error('Resume analysis error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      name: error.name
-    });
+    const errStr = String(error.message || error);
+    const isRateLimit = errStr.includes('429') || errStr.includes('rate_limit') || errStr.includes('Rate limit');
+
+    if (isRateLimit) {
+      return NextResponse.json(
+        {
+          error: 'rate_limit',
+          message: '😅 AI 模型额度用完啦！这是免费 Demo，后续会补充额度，请稍后再试~',
+          retryable: true
+        },
+        { status: 429 }
+      );
+    }
 
     return NextResponse.json(
       {
