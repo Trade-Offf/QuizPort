@@ -22,15 +22,6 @@ export default function CapsuleNav() {
         {nav.guide}
       </Link>
       <span className="text-white/30">·</span>
-      <Link href="/upload" className={linkCls}>
-        {nav.upload}
-      </Link>
-      <span className="text-white/30">·</span>
-
-      <Link href="/history" className={linkCls}>
-        {nav.history}
-      </Link>
-      <span className="text-white/30">·</span>
       <Link href="/remote" className={linkCls}>
         {nav.remote}
       </Link>

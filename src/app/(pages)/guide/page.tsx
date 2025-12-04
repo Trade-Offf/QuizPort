@@ -115,8 +115,6 @@ export default function GuidePage() {
   const step2 = guide.steps.step2;
   const step3 = guide.steps.step3;
   const step4 = guide.steps.step4;
-  const step5 = guide.steps.step5;
-  const step6 = guide.steps.step6;
 
   return (
     <main className="min-h-screen p-6">
@@ -223,25 +221,6 @@ export default function GuidePage() {
             num={4}
             title={step4.title}
             desc={step4.desc}
-            extra={
-              <img
-                src="/04-copyUrl.png"
-                alt={step4.imageAlt}
-                className="rounded shadow-lg ring-1 ring-white/10 w-full max-w-3xl"
-              />
-            }
-          />
-
-          <Step
-            num={5}
-            title={step5.title}
-            desc={step5.desc}
-          />
-
-          <Step
-            num={6}
-            title={step6.title}
-            desc={step6.desc}
           />
         </div>
         <p className="mt-8 text-sm text-white/70">

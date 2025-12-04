@@ -44,32 +44,22 @@ export default function HomePage() {
         <div className="mt-16 flex flex-wrap items-center justify-center gap-4">
           <Button
             as={Link}
-            href="/upload"
+            href="/guide"
             size="lg"
             radius="full"
             className="bg-white text-gray-900 shadow-lg hover:shadow-xl"
           >
-            {home.ctaPrimary}
+            {home.ctaGuide}
           </Button>
           <Button
             as={Link}
-            href="/history"
+            href="/remote"
             variant="bordered"
             size="lg"
             radius="full"
             className="border-white/30 text-white/80 hover:text-white"
           >
-            {home.ctaSecondary}
-          </Button>
-          <Button
-            as={Link}
-            href="/guide"
-            variant="light"
-            size="lg"
-            radius="full"
-            className="text-white/80 hover:text-white"
-          >
-            {home.ctaGuide}
+            {home.ctaRemote}
           </Button>
         </div>
 

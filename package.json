@@ -45,7 +45,6 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "15.1.4",
     "lightningcss-wasm": "^1.28.0",
-    "playwright": "^1.56.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
     "tsx": "^4.19.1",
