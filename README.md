@@ -77,26 +77,19 @@ QuizPort 是一个 AI 驱动的模拟面试平台，帮助求职者通过语音�
 ### 系统流程
 
 ```mermaid
-graph TD
-    A[用户上传简历] --> B[PDF解析/文字输入]
-    B --> C[AI提取技能+项目]
-    C --> D[岗位识别算法]
-    D --> E[生成动态Prompt]
+flowchart TD
+    A[用户上传简历] --> B[PDF解析]
+    B --> C[AI提取技能]
+    C --> D[岗位识别]
+    D --> E[生成Prompt]
     E --> F[首题生成]
-    
-    F --> G[用户语音回答]
-    G --> H[Deepgram转录]
-    H --> I[AI评估打分]
-    I --> J[动态生成下一题]
+    F --> G[语音回答]
+    G --> H[转录文字]
+    H --> I[AI评估]
+    I --> K{结束?}
+    K -->|否| J[生成下题]
     J --> G
-    
-    I --> K{是否结束?}
-    K -->|是| L[总体评估报告]
-    K -->|否| J
-    
-    style C fill:#e1f5ff
-    style D fill:#fff3e0
-    style I fill:#f3e5f5
+    K -->|是| L[总评报告]
 ```
 
 ### 技术栈
@@ -118,22 +111,19 @@ graph TD
 ### 1️⃣ 动态面试官 Prompt 生成
 
 ```mermaid
-graph LR
-    A[简历技能] --> B{关键词匹配}
-    B -->|React/Vue| C[前端题库]
-    B -->|Spring/Go| D[后端题库]
-    B -->|数据分析| E[数据题库]
-    B -->|产品设计| F[产品题库]
-    
-    C --> G[动态Prompt]
+flowchart LR
+    A[简历技能] --> B{匹配}
+    B -->|React| C[前端]
+    B -->|Spring| D[后端]
+    B -->|数据| E[数据]
+    B -->|产品| F[产品]
+
+    C --> G[Prompt]
     D --> G
     E --> G
     F --> G
-    
-    G --> H[AI生成面试题]
-    
-    style B fill:#ffecb3
-    style G fill:#c5e1a5
+
+    G --> H[生成题目]
 ```
 
 **关键实现：**
@@ -174,20 +164,18 @@ function analyzeRoleAndGenerateContext(resumeAnalysis: any) {
 sequenceDiagram
     participant U as 用户
     participant B as 浏览器
-    participant API as Next.js API
+    participant API as API
     participant D as Deepgram
-    
+
     U->>B: 点击录音
-    B->>B: MediaRecorder 录制
+    B->>B: 录制音频
     U->>B: 点击停止
-    B->>B: 生成 WebM Blob
-    B->>API: POST /api/transcribe
-    API->>D: REST API 上传音频
-    D-->>API: 返回转录文本
-    API-->>B: JSON { text }
-    B->>U: 显示转录结果
-    
-    Note over API,D: 中英文识别<br/>准确率 95%+
+    B->>B: 生成Blob
+    B->>API: POST音频
+    API->>D: 上传
+    D-->>API: 返回文本
+    API-->>B: JSON
+    B->>U: 显示
 ```
 
 **实现代码：**
@@ -219,22 +207,17 @@ const { text } = await response.json();
 ### 3️⃣ AI 评估 + 动态追问
 
 ```mermaid
-graph TD
+flowchart TD
     A[用户回答] --> B[AI评估]
     B --> C{评分}
-    
-    C -->|>80分| D[追问深层原理]
-    C -->|60-80分| E[换角度提问]
-    C -->|<60分| F[回归基础]
-    
-    D --> G[生成下一题]
+
+    C -->|高分| D[追问原理]
+    C -->|中分| E[换角度]
+    C -->|低分| F[回基础]
+
+    D --> G[下一题]
     E --> G
     F --> G
-    
-    style B fill:#e1bee7
-    style D fill:#c8e6c9
-    style E fill:#fff9c4
-    style F fill:#ffccbc
 ```
 
 **评估维度：**
@@ -271,20 +254,15 @@ graph TD
 ### 4️⃣ 多模型容灾机制
 
 ```mermaid
-graph TD
-    A[AI请求] --> B[Groq llama-3.3-70b]
-    B -->|成功| Z[返回结果]
-    B -->|限流| C[Groq llama-3.1-8b]
+flowchart TD
+    A[AI请求] --> B[Groq-70b]
+    B -->|成功| Z[返回]
+    B -->|限流| C[Groq-8b]
     C -->|成功| Z
-    C -->|限流| D[Groq gemma2-9b]
+    C -->|限流| D[Groq-9b]
     D -->|成功| Z
-    D -->|限流| E[兜底API gpt-4o-mini]
+    D -->|限流| E[兜底API]
     E --> Z
-    
-    style B fill:#bbdefb
-    style C fill:#c5cae9
-    style D fill:#d1c4e9
-    style E fill:#f8bbd0
 ```
 
 **实现代码：**
@@ -373,7 +351,7 @@ npm start
 ## 📝 使用流程
 
 ```mermaid
-graph LR
+flowchart LR
     A[1.上传简历] --> B[2.设备检测]
     B --> C[3.开始面试]
     C --> D[4.语音回答]
@@ -381,11 +359,6 @@ graph LR
     E --> F{继续?}
     F -->|是| D
     F -->|否| G[6.总体评估]
-    
-    style A fill:#e3f2fd
-    style C fill:#fff3e0
-    style E fill:#f3e5f5
-    style G fill:#e8f5e9
 ```
 
 ### 详细步骤
